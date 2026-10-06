@@ -1,0 +1,32 @@
+{
+  "name": "codecausality",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first change impact intelligence for software repositories.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @codecausality/core && npm run build -w @codecausality/cli",
+    "typecheck": "npm run typecheck -w @codecausality/core && npm run build -w @codecausality/core && npm run typecheck -w @codecausality/cli",
+    "test": "npm run test -w @codecausality/core",
+    "test:coverage": "npm run test:coverage -w @codecausality/core",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "quality": "npm run lint && npm run typecheck && npm run test:coverage && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}
