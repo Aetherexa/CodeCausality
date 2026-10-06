@@ -1,10 +1,12 @@
+import { builtinModules } from 'node:module';
 import path from 'node:path';
 import ts from 'typescript';
-import type { DependencyEdge, ExternalReference, ImportKind } from './types.js';
 import { readTextFile } from './fs.js';
+import type { DependencyEdge, ExternalReference, ImportKind } from './types.js';
 
 const JS_TS_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts']);
 const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts'];
+const NODE_BUILTINS = new Set(builtinModules.map((name) => name.replace(/^node:/, '')));
 
 interface ImportFact {
   specifier: string;
@@ -40,7 +42,7 @@ export async function analyzeJsTsRelationships(
             kind: fact.kind,
           });
         }
-      } else if (!isNodeBuiltin(fact.specifier)) {
+      } else if (!isNodeBuiltin(fact.specifier) && isPackageLikeSpecifier(fact.specifier)) {
         externalReferences.push({
           from: file,
           specifier: fact.specifier,
@@ -61,7 +63,7 @@ function extractImports(file: string, content: string): ImportFact[] {
   const source = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKind(file));
   const facts: ImportFact[] = [];
 
-  source.forEachChild((node) => {
+  const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
       const moduleSpecifier = node.moduleSpecifier;
       if (moduleSpecifier && ts.isStringLiteral(moduleSpecifier)) {
@@ -88,8 +90,11 @@ function extractImports(file: string, content: string): ImportFact[] {
         kind: 'require',
       });
     }
-  });
 
+    ts.forEachChild(node, visit);
+  };
+
+  visit(source);
   return dedupeFacts(facts);
 }
 
@@ -129,7 +134,16 @@ function packageRoot(specifier: string): string {
 }
 
 function isNodeBuiltin(specifier: string): boolean {
-  return specifier.startsWith('node:');
+  if (specifier.startsWith('node:')) return true;
+  if (NODE_BUILTINS.has(specifier)) return true;
+  const root = specifier.split('/')[0] ?? specifier;
+  return NODE_BUILTINS.has(root);
+}
+
+function isPackageLikeSpecifier(specifier: string): boolean {
+  if (specifier.startsWith('#')) return false;
+  if (specifier.startsWith('@/')) return false;
+  return true;
 }
 
 function dedupeFacts(facts: ImportFact[]): ImportFact[] {
