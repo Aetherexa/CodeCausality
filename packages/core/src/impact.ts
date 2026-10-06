@@ -2,9 +2,11 @@ import path from 'node:path';
 import { buildReverseGraph } from './graph.js';
 import { normalizePath } from './fs.js';
 import type {
+  ChangeSetImpactOptions,
   ChangeSetImpactSummary,
   ImpactRiskLevel,
   ImpactSummary,
+  ModuleImpactSummary,
   RepositorySnapshot,
 } from './types.js';
 
@@ -77,6 +79,7 @@ export function analyzeImpact(snapshot: RepositorySnapshot, targetFile: string):
 export function analyzeChangeSetImpact(
   snapshot: RepositorySnapshot,
   targetFiles: string[],
+  options: ChangeSetImpactOptions = {},
 ): ChangeSetImpactSummary {
   const normalizedTargets = unique(
     targetFiles.map((file) => normalizeTarget(snapshot.rootDir, file)),
@@ -111,10 +114,60 @@ export function analyzeChangeSetImpact(
     missingTargets,
     affectedFiles,
     affectedTests,
+    affectedModules: aggregateModules(
+      foundTargets,
+      affectedFiles,
+      affectedTests,
+      options.moduleDepth ?? 2,
+    ),
     rankedTargets,
     impactScore,
     riskLevel: riskLevelFor(impactScore),
   };
+}
+
+function aggregateModules(
+  changedFiles: string[],
+  affectedFiles: string[],
+  affectedTests: string[],
+  depth: number,
+): ModuleImpactSummary[] {
+  const changedSet = new Set(changedFiles);
+  const testSet = new Set(affectedTests);
+  const modules = new Map<string, ModuleImpactSummary>();
+
+  for (const file of affectedFiles) {
+    const moduleName = moduleFor(file, depth);
+    const entry = modules.get(moduleName) ?? {
+      module: moduleName,
+      changedFiles: [],
+      affectedFiles: [],
+      affectedTests: [],
+    };
+    entry.affectedFiles.push(file);
+    if (changedSet.has(file)) entry.changedFiles.push(file);
+    if (testSet.has(file)) entry.affectedTests.push(file);
+    modules.set(moduleName, entry);
+  }
+
+  return [...modules.values()]
+    .map((entry) => ({
+      ...entry,
+      changedFiles: entry.changedFiles.sort(),
+      affectedFiles: entry.affectedFiles.sort(),
+      affectedTests: entry.affectedTests.sort(),
+    }))
+    .sort(
+      (a, b) =>
+        b.affectedFiles.length - a.affectedFiles.length || a.module.localeCompare(b.module),
+    );
+}
+
+function moduleFor(file: string, depth: number): string {
+  const parts = normalizePath(file).split('/');
+  const directories = parts.slice(0, -1);
+  if (directories.length === 0) return '(root)';
+  return directories.slice(0, Math.max(1, depth)).join('/');
 }
 
 function traverseDependents(
