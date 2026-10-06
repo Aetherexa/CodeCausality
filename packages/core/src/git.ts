@@ -17,6 +17,18 @@ export interface GitChangeSet {
   files: string[];
 }
 
+export interface GitFileHistory {
+  file: string;
+  commitCount: number;
+  additions: number;
+  deletions: number;
+  churn: number;
+  lastCommitSha?: string;
+  lastAuthor?: string;
+  lastAuthorEmail?: string;
+  lastCommitDate?: string;
+}
+
 export async function getGitChangedFiles(options: GitChangedFilesOptions): Promise<GitChangeSet> {
   const rootDir = path.resolve(options.rootDir);
   await assertGitRepository(rootDir);
@@ -56,6 +68,28 @@ export async function getGitChangedFiles(options: GitChangedFilesOptions): Promi
   };
 }
 
+export async function getGitFileHistory(
+  rootDir: string,
+  files: string[],
+): Promise<GitFileHistory[]> {
+  const absoluteRoot = path.resolve(rootDir);
+  await assertGitRepository(absoluteRoot);
+  const result: GitFileHistory[] = [];
+
+  for (const file of [...new Set(files.map(normalizePath))].sort()) {
+    const { stdout } = await runGit(absoluteRoot, [
+      'log',
+      '--format=__CC__%H%x1f%an%x1f%ae%x1f%aI',
+      '--numstat',
+      '--',
+      file,
+    ]);
+    result.push(parseFileHistory(file, stdout));
+  }
+
+  return result;
+}
+
 async function assertGitRepository(rootDir: string): Promise<void> {
   try {
     const { stdout } = await runGit(rootDir, ['rev-parse', '--is-inside-work-tree']);
@@ -77,6 +111,47 @@ async function runGit(rootDir: string, args: string[]): Promise<{ stdout: string
     const details = error as Error & { stderr?: string };
     throw new Error(details.stderr?.trim() || details.message);
   }
+}
+
+function parseFileHistory(file: string, output: string): GitFileHistory {
+  let commitCount = 0;
+  let additions = 0;
+  let deletions = 0;
+  let lastCommitSha: string | undefined;
+  let lastAuthor: string | undefined;
+  let lastAuthorEmail: string | undefined;
+  let lastCommitDate: string | undefined;
+
+  for (const line of output.split(/\r?\n/)) {
+    if (line.startsWith('__CC__')) {
+      commitCount += 1;
+      if (commitCount === 1) {
+        const [sha, author, email, date] = line.slice('__CC__'.length).split('\x1f');
+        lastCommitSha = sha || undefined;
+        lastAuthor = author || undefined;
+        lastAuthorEmail = email || undefined;
+        lastCommitDate = date || undefined;
+      }
+      continue;
+    }
+
+    const match = line.match(/^(\d+|-)\t(\d+|-)\t/);
+    if (!match) continue;
+    additions += match[1] === '-' ? 0 : Number(match[1]);
+    deletions += match[2] === '-' ? 0 : Number(match[2]);
+  }
+
+  return {
+    file,
+    commitCount,
+    additions,
+    deletions,
+    churn: additions + deletions,
+    lastCommitSha,
+    lastAuthor,
+    lastAuthorEmail,
+    lastCommitDate,
+  };
 }
 
 function parseLines(value: string): string[] {

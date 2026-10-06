@@ -17,19 +17,31 @@
 
 ## Sprint 1 — Git-aware impact
 
-### P0
-
 - [x] Add git changed-file provider.
 - [x] Add `impact --since <ref>` and `impact --working-tree` CLI workflows.
 - [x] Rank changed files by blast radius.
-- [ ] Add fixture repository for regression coverage.
-- [ ] Add persisted JSON report output.
-- [ ] Add configurable ignore patterns.
+- [x] Add fixture repository for regression coverage.
+
+## Sprint 2 — Repository context and reporting
+
+### P0
+
+- [x] Add configurable ignore patterns through `.codecausality.json`.
+- [x] Add persisted JSON output with `--output`.
+- [x] Add stable impact report schema version.
+- [x] Add module/directory aggregation.
 
 ### P1
 
-- [ ] Add churn and last-touch metadata.
-- [ ] Add CODEOWNERS parsing.
-- [ ] Add module/directory aggregation.
+- [x] Add CODEOWNERS parsing and ownership resolution.
+- [x] Add Git churn and last-touch metadata.
+- [x] Include ownership/history evidence in Git-aware output.
+
+## Sprint 3 — PR intelligence
+
 - [ ] Add architecture boundary configuration.
-- [ ] Add richer test mapping heuristics.
+- [ ] Add richer affected-test mapping heuristics.
+- [ ] Add GitHub Action.
+- [ ] Generate PR impact summary.
+- [ ] Publish recommended test surface.
+- [ ] Add evidence links for reviewers.

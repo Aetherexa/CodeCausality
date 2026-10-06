@@ -7,7 +7,7 @@ import { calculateFileMetrics } from './metrics.js';
 
 export async function analyzeRepository(options: AnalysisOptions): Promise<RepositorySnapshot> {
   const rootDir = path.resolve(options.rootDir);
-  const files = await discoverFiles(rootDir, options.maxFiles);
+  const files = await discoverFiles(rootDir, options.maxFiles, options.ignorePatterns ?? []);
   const { dependencies, externalReferences } = await analyzeJsTsRelationships(rootDir, files);
   const circularDependencies = findCircularDependencies(files, dependencies);
   const fileMetrics = await calculateFileMetrics(rootDir, files, dependencies);

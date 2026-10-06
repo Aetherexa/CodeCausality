@@ -60,7 +60,28 @@ describe('repository analysis', () => {
     );
   });
 
-  it('computes transitive blast radius and affected tests', async () => {
+  it('computes transitive blast radius, affected tests and modules', async () => {
+    const root = await fixture();
+    const result = await analyzeRepository({ rootDir: root });
+    const impact = analyzeChangeSetImpact(result, ['src/pricing.ts'], { moduleDepth: 2 });
+
+    expect(impact.affectedFiles).toContain('src/screen.ts');
+    expect(impact.affectedTests).toContain('src/__tests__/quote.test.ts');
+    expect(impact.affectedModules).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          module: 'src',
+          changedFiles: ['src/pricing.ts'],
+        }),
+        expect.objectContaining({
+          module: 'src/__tests__',
+          affectedTests: ['src/__tests__/quote.test.ts'],
+        }),
+      ]),
+    );
+  });
+
+  it('computes direct impact for a single file', async () => {
     const root = await fixture();
     const result = await analyzeRepository({ rootDir: root });
     const impact = analyzeImpact(result, 'src/pricing.ts');
@@ -68,7 +89,6 @@ describe('repository analysis', () => {
     expect(impact.found).toBe(true);
     expect(impact.directDependents).toEqual(['src/quote.ts']);
     expect(impact.transitiveDependents).toContain('src/screen.ts');
-    expect(impact.affectedTests).toContain('src/__tests__/quote.test.ts');
     expect(impact.impactScore).toBeGreaterThan(0);
   });
 
@@ -81,6 +101,19 @@ describe('repository analysis', () => {
     expect(impact.missingTargets).toEqual(['src/missing.ts']);
     expect(impact.affectedFiles).toContain('src/screen.ts');
     expect(impact.rankedTargets[0]?.target).toBe('src/pricing.ts');
+  });
+
+  it('honors repository ignore patterns', async () => {
+    const root = await fixture();
+    await mkdir(path.join(root, 'generated'), { recursive: true });
+    await writeFile(path.join(root, 'generated', 'client.ts'), 'export const generated = true;\n');
+
+    const result = await analyzeRepository({
+      rootDir: root,
+      ignorePatterns: ['generated/**'],
+    });
+
+    expect(result.files.some((file) => file.path === 'generated/client.ts')).toBe(false);
   });
 
   it('detects circular dependencies', async () => {
