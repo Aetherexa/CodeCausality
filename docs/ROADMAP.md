@@ -5,23 +5,24 @@
 - deterministic local scanner
 - JavaScript/TypeScript AST relationship extraction
 - internal dependency graph
-- external usage references (no package intelligence)
 - circular dependency detection
 - structural hotspot score
 - file-level blast radius
 - affected-test discovery
 - CLI / JSON / Mermaid output
-- CI, coverage and Sonar-ready configuration
+- CI and coverage
 
-## v0.2 — Git Change Intelligence
+## v0.2 — Git & Repository Context Intelligence
 
-- compare Git refs and current working tree (implemented)
-- aggregate blast radius across changed files (implemented)
-- risk-rank changed source files (implemented)
-- churn and last-touch ownership
+- compare Git refs and current working tree
+- aggregate blast radius across changed files
+- risk-rank changed source files
+- configurable repository ignore patterns
+- module-level impact aggregation
 - CODEOWNERS enrichment
-- changed-file risk ranking
-- `codecausality impact --since <ref>` and `codecausality impact --working-tree`
+- churn and last-touch evidence
+- versioned persistent impact reports
+- regression fixture repository
 
 ## v0.3 — PR Intelligence
 
@@ -30,6 +31,7 @@
 - recommended test surface
 - architecture boundary warnings
 - evidence links for reviewers
+- report artifact publishing
 
 ## v0.4 — Developer Surfaces
 
