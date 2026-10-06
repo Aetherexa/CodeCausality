@@ -4,13 +4,17 @@
   "private": true,
   "description": "Local-first change impact intelligence for software repositories.",
   "license": "MIT",
-  "engines": { "node": ">=20" },
-  "workspaces": ["packages/*"],
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "npm run build --workspaces",
-    "typecheck": "npm run typecheck --workspaces",
-    "test": "npm run test --workspaces --if-present",
-    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "build": "npm run build -w @codecausality/core && npm run build -w @codecausality/cli",
+    "typecheck": "npm run typecheck -w @codecausality/core && npm run build -w @codecausality/core && npm run typecheck -w @codecausality/cli",
+    "test": "npm run test -w @codecausality/core",
+    "test:coverage": "npm run test:coverage -w @codecausality/core",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "quality": "npm run lint && npm run typecheck && npm run test:coverage && npm run build"
