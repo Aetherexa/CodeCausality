@@ -86,6 +86,16 @@ export function analyzeChangeSetImpact(
   const missingTargets = results.filter((result) => !result.found).map((result) => result.target);
   const affectedFiles = unique(results.flatMap((result) => result.affectedFiles)).sort();
   const affectedTests = unique(results.flatMap((result) => result.affectedTests)).sort();
+  const rankedTargets = results
+    .filter((result) => result.found)
+    .map((result) => ({
+      target: result.target,
+      impactScore: result.impactScore,
+      riskLevel: result.riskLevel,
+      affectedFiles: result.affectedFiles.length,
+      affectedTests: result.affectedTests.length,
+    }))
+    .sort((a, b) => b.impactScore - a.impactScore || a.target.localeCompare(b.target));
   const impactScore =
     results.length === 0
       ? 0
@@ -101,6 +111,7 @@ export function analyzeChangeSetImpact(
     missingTargets,
     affectedFiles,
     affectedTests,
+    rankedTargets,
     impactScore,
     riskLevel: riskLevelFor(impactScore),
   };
