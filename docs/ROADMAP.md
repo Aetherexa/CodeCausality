@@ -15,12 +15,13 @@
 
 ## v0.2 — Git Change Intelligence
 
-- compare working tree / git refs
-- aggregate blast radius across changed files
+- compare Git refs and current working tree (implemented)
+- aggregate blast radius across changed files (implemented)
+- risk-rank changed source files (implemented)
 - churn and last-touch ownership
 - CODEOWNERS enrichment
 - changed-file risk ranking
-- `codecausality impact --since <ref>`
+- `codecausality impact --since <ref>` and `codecausality impact --working-tree`
 
 ## v0.3 — PR Intelligence
 
