@@ -6,7 +6,7 @@ CodeCausality is a local-first change impact intelligence engine for software re
 
 > **If I change this, what else could be affected?**
 
-## What v0.1 does
+## What it does today
 
 - Builds internal JavaScript/TypeScript import relationships using the TypeScript AST.
 - Resolves common NodeNext `.js` import specifiers back to TypeScript source files.
@@ -14,6 +14,7 @@ CodeCausality is a local-first change impact intelligence engine for software re
 - Calculates lightweight structural hotspots from fan-in, fan-out, size and code signals.
 - Computes direct and transitive blast radius for a file.
 - Identifies test files inside the affected graph.
+- Computes Git-aware change-set impact with `impact --since <ref>` or `impact --working-tree`.
 - Records external package *usage references* for enrichment, without becoming a package-management analyzer.
 - Emits CLI, JSON and Mermaid output.
 
@@ -49,6 +50,8 @@ Planned packaged usage:
 ```bash
 codecausality scan .
 codecausality impact src/services/pricing.ts
+codecausality impact --since main
+codecausality impact --working-tree
 ```
 
 ## Architecture

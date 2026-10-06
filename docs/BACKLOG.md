@@ -19,9 +19,9 @@
 
 ### P0
 
-- [ ] Add git changed-file provider.
-- [ ] Add `impact --since <ref>` CLI workflow.
-- [ ] Rank changed files by blast radius.
+- [x] Add git changed-file provider.
+- [x] Add `impact --since <ref>` and `impact --working-tree` CLI workflows.
+- [x] Rank changed files by blast radius.
 - [ ] Add fixture repository for regression coverage.
 - [ ] Add persisted JSON report output.
 - [ ] Add configurable ignore patterns.

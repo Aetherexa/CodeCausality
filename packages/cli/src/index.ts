@@ -1,7 +1,18 @@
 #!/usr/bin/env node
 import path from 'node:path';
-import { analyzeImpact, analyzeRepository, toMermaid } from '@codecausality/core';
-import type { ImpactSummary, RepositorySnapshot } from '@codecausality/core';
+import {
+  analyzeChangeSetImpact,
+  analyzeImpact,
+  analyzeRepository,
+  getGitChangedFiles,
+  toMermaid,
+} from '@codecausality/core';
+import type {
+  ChangeSetImpactSummary,
+  GitChangeSet,
+  ImpactSummary,
+  RepositorySnapshot,
+} from '@codecausality/core';
 
 type OutputFormat = 'pretty' | 'json' | 'mermaid';
 
@@ -10,6 +21,8 @@ interface CliOptions {
   positional: string[];
   format: OutputFormat;
   repo: string;
+  since?: string;
+  workingTree: boolean;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -18,6 +31,8 @@ function parseArgs(argv: string[]): CliOptions {
   const positional: string[] = [];
   let format: OutputFormat = 'pretty';
   let repo = '.';
+  let since: string | undefined;
+  let workingTree = false;
 
   for (let i = 1; i < args.length; i += 1) {
     const arg = args[i];
@@ -27,12 +42,18 @@ function parseArgs(argv: string[]): CliOptions {
       else throw new Error('Expected --format pretty|json|mermaid');
     } else if (arg === '--repo') {
       repo = args[++i] ?? '.';
+    } else if (arg === '--since') {
+      const value = args[++i];
+      if (!value) throw new Error('Expected a Git ref after --since');
+      since = value;
+    } else if (arg === '--working-tree') {
+      workingTree = true;
     } else if (!arg.startsWith('-')) {
       positional.push(arg);
     }
   }
 
-  return { command, positional, format, repo };
+  return { command, positional, format, repo, since, workingTree };
 }
 
 function pretty(snapshot: RepositorySnapshot): string {
@@ -93,6 +114,35 @@ function prettyImpact(impact: ImpactSummary): string {
   ].join('\n');
 }
 
+function prettyGitImpact(
+  changeSet: GitChangeSet,
+  ignoredFiles: string[],
+  impact: ChangeSetImpactSummary,
+): string {
+  const scope = changeSet.mode === 'ref' ? `since ${changeSet.baseRef}` : 'working tree';
+  return [
+    'CodeCausality Git Impact',
+    `Scope: ${scope}`,
+    `Changed files: ${changeSet.files.length}`,
+    `Changed source files analyzed: ${impact.foundTargets.length}`,
+    `Non-source/unresolved files ignored: ${ignoredFiles.length}`,
+    `Combined impact: ${impact.riskLevel} (${impact.impactScore}/100)`,
+    `Affected files: ${impact.affectedFiles.length}`,
+    `Affected tests: ${impact.affectedTests.length}`,
+    '',
+    'Risk-ranked changed files:',
+    ...(impact.rankedTargets.length > 0
+      ? impact.rankedTargets.map(
+          (item, index) =>
+            `  ${index + 1}. ${item.target} — ${item.riskLevel} ${item.impactScore}/100, ${item.affectedFiles} affected file(s), ${item.affectedTests} test(s)`,
+        )
+      : ['  - No changed source files found in the current repository graph.']),
+    '',
+    `Affected tests (${impact.affectedTests.length}):`,
+    ...impact.affectedTests.map((file) => `  - ${file}`),
+  ].join('\n');
+}
+
 async function main(): Promise<void> {
   const options = parseArgs(process.argv);
 
@@ -102,6 +152,8 @@ async function main(): Promise<void> {
         'Usage:',
         '  codecausality scan [path] [--format pretty|json|mermaid]',
         '  codecausality impact <file> [--repo path] [--format pretty|json]',
+        '  codecausality impact --since <git-ref> [--repo path] [--format pretty|json]',
+        '  codecausality impact --working-tree [--repo path] [--format pretty|json]',
         '',
         'CodeCausality performs deterministic local analysis. No LLM or agent is required.',
       ].join('\n'),
@@ -119,15 +171,45 @@ async function main(): Promise<void> {
   }
 
   if (options.command === 'impact') {
-    const targetFile = options.positional[0];
-    if (!targetFile) {
-      throw new Error('Usage: codecausality impact <file> [--repo path]');
-    }
     if (options.format === 'mermaid') {
       throw new Error('Mermaid output is only supported by scan');
     }
 
-    const snapshot = await analyzeRepository({ rootDir: path.resolve(options.repo) });
+    const rootDir = path.resolve(options.repo);
+    const snapshot = await analyzeRepository({ rootDir });
+
+    if (options.since && options.workingTree) {
+      throw new Error('Use either --since <git-ref> or --working-tree, not both');
+    }
+
+    if (options.since || options.workingTree) {
+      if (options.positional.length > 0) {
+        throw new Error(
+          'Use either impact <file>, impact --since <git-ref>, or impact --working-tree',
+        );
+      }
+
+      const changeSet = await getGitChangedFiles({ rootDir, since: options.since });
+      const knownSourceFiles = new Set(snapshot.files.map((file) => file.path));
+      const sourceTargets = changeSet.files.filter((file) => knownSourceFiles.has(file));
+      const ignoredFiles = changeSet.files.filter((file) => !knownSourceFiles.has(file));
+      const impact = analyzeChangeSetImpact(snapshot, sourceTargets);
+
+      if (options.format === 'json') {
+        console.log(JSON.stringify({ changeSet, ignoredFiles, impact }, null, 2));
+      } else {
+        console.log(prettyGitImpact(changeSet, ignoredFiles, impact));
+      }
+      return;
+    }
+
+    const targetFile = options.positional[0];
+    if (!targetFile) {
+      throw new Error(
+        'Usage: codecausality impact <file>, impact --since <git-ref>, or impact --working-tree',
+      );
+    }
+
     const impact = analyzeImpact(snapshot, targetFile);
     if (options.format === 'json') console.log(JSON.stringify(impact, null, 2));
     else console.log(prettyImpact(impact));

@@ -32,7 +32,7 @@ async function fixture(): Promise<string> {
 }
 
 describe('repository analysis', () => {
-  it('builds relationships without duplicating DrJSON package intelligence', async () => {
+  it('builds internal relationships without duplicating DrJSON package intelligence', async () => {
     const root = await fixture();
     const result = await analyzeRepository({ rootDir: root });
 
@@ -72,7 +72,7 @@ describe('repository analysis', () => {
     expect(impact.impactScore).toBeGreaterThan(0);
   });
 
-  it('aggregates impact for a changed file set', async () => {
+  it('aggregates and ranks impact for a changed file set', async () => {
     const root = await fixture();
     const result = await analyzeRepository({ rootDir: root });
     const impact = analyzeChangeSetImpact(result, ['src/pricing.ts', 'src/missing.ts']);
@@ -80,6 +80,7 @@ describe('repository analysis', () => {
     expect(impact.foundTargets).toEqual(['src/pricing.ts']);
     expect(impact.missingTargets).toEqual(['src/missing.ts']);
     expect(impact.affectedFiles).toContain('src/screen.ts');
+    expect(impact.rankedTargets[0]?.target).toBe('src/pricing.ts');
   });
 
   it('detects circular dependencies', async () => {
@@ -103,7 +104,11 @@ describe('repository analysis', () => {
 
     const result = await analyzeRepository({ rootDir: root });
     expect(result.dependencies).toContainEqual(
-      expect.objectContaining({ from: 'src/entry.ts', to: 'src/lazy.ts', kind: 'dynamic' }),
+      expect.objectContaining({
+        from: 'src/entry.ts',
+        to: 'src/lazy.ts',
+        kind: 'dynamic',
+      }),
     );
     expect(
       result.externalReferences.some((reference) => reference.packageName === 'fs'),
