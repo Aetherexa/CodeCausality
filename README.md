@@ -10,13 +10,14 @@ CodeCausality is a local-first change impact intelligence engine for software re
 
 - Builds internal JavaScript/TypeScript import relationships using the TypeScript AST.
 - Resolves common NodeNext `.js` import specifiers back to TypeScript source files.
-- Finds circular dependencies.
-- Calculates lightweight structural hotspots from fan-in, fan-out, size and code signals.
-- Computes direct and transitive blast radius for a file.
-- Identifies test files inside the affected graph.
+- Finds circular dependencies and structural hotspots.
+- Computes direct and transitive blast radius.
+- Identifies affected tests and impacted modules.
 - Computes Git-aware change-set impact with `impact --since <ref>` or `impact --working-tree`.
+- Adds CODEOWNERS and Git churn/last-touch evidence for changed source files.
+- Supports repository-specific ignore patterns through `.codecausality.json`.
+- Emits versioned JSON impact reports that can be persisted for CI/PR integrations.
 - Records external package *usage references* for enrichment, without becoming a package-management analyzer.
-- Emits CLI, JSON and Mermaid output.
 
 ## What it deliberately does not do
 
@@ -36,51 +37,57 @@ Baseline scanning is deterministic and runs locally. It does not require an LLM,
 ## CLI
 
 ```bash
-npm install
-npm run build
-
-node packages/cli/dist/index.js scan .
-node packages/cli/dist/index.js impact packages/core/src/types.ts --repo .
-node packages/cli/dist/index.js scan . --format json
-node packages/cli/dist/index.js scan . --format mermaid
-```
-
-Planned packaged usage:
-
-```bash
 codecausality scan .
 codecausality impact src/services/pricing.ts
 codecausality impact --since main
 codecausality impact --working-tree
+codecausality impact --since main --output .codecausality/impact.json
 ```
+
+Git-aware JSON output uses a stable versioned report contract. See [`docs/REPORT_SCHEMA.md`](docs/REPORT_SCHEMA.md).
+
+## Repository configuration
+
+Create `.codecausality.json` at the repository root:
+
+```json
+{
+  "ignore": [
+    "generated/**",
+    "vendor/**"
+  ],
+  "moduleDepth": 2
+}
+```
+
+Use `--config <path>` to load a different configuration file.
 
 ## Architecture
 
 ```text
 Repository
    |
-   v
-Discovery
+   +--> .codecausality.json
+   +--> CODEOWNERS
+   +--> Git history
    |
    v
-Language analyzers
-   |
-   +------> External usage references -----> DrJSON enrichment (future integration)
+Discovery + language analyzers
    |
    v
 Source relationship graph
    |
-   +------> cycles / hotspots
+   +--> cycles / hotspots
+   +--> affected tests
+   +--> affected modules
+   +--> ownership / churn
    |
    v
-Change impact engine
+Versioned impact report
    |
-   +------> affected files
-   +------> affected tests
-   +------> evidence + risk score
-   |
-   v
-CLI / GitHub / VS Code / MCP adapters
+   +--> CLI today
+   +--> GitHub Action next
+   +--> VS Code / MCP later
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/PRODUCT.md`](docs/PRODUCT.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
