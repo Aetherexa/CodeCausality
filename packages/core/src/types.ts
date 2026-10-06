@@ -1,6 +1,7 @@
 export interface AnalysisOptions {
   rootDir: string;
   maxFiles?: number;
+  ignorePatterns?: string[];
 }
 
 export type ImportKind = 'static' | 'dynamic' | 'require';
@@ -74,13 +75,25 @@ export interface RankedTargetImpact {
   affectedTests: number;
 }
 
+export interface ModuleImpactSummary {
+  module: string;
+  changedFiles: string[];
+  affectedFiles: string[];
+  affectedTests: string[];
+}
+
 export interface ChangeSetImpactSummary {
   targets: string[];
   foundTargets: string[];
   missingTargets: string[];
   affectedFiles: string[];
   affectedTests: string[];
+  affectedModules: ModuleImpactSummary[];
   rankedTargets: RankedTargetImpact[];
   impactScore: number;
   riskLevel: ImpactRiskLevel;
+}
+
+export interface ChangeSetImpactOptions {
+  moduleDepth?: number;
 }
