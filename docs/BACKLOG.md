@@ -11,6 +11,7 @@
 - [x] Add cycle analysis and structural metrics.
 - [x] Add file-level blast radius and affected-test discovery.
 - [x] Add tests, CI and Sonar-ready config.
+- [ ] Generate and commit the npm lockfile from a networked environment.
 - [ ] Configure branch protection / required checks.
 - [ ] Connect SonarCloud project and quality gate.
 
