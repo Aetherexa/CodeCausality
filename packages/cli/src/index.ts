@@ -1,15 +1,24 @@
 #!/usr/bin/env node
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   analyzeChangeSetImpact,
   analyzeImpact,
   analyzeRepository,
+  createImpactReport,
   getGitChangedFiles,
+  getGitFileHistory,
+  loadCodeCausalityConfig,
+  loadCodeOwners,
+  resolveCodeOwners,
   toMermaid,
 } from '@codecausality/core';
 import type {
   ChangeSetImpactSummary,
+  CodeCausalityImpactReport,
+  FileOwnership,
   GitChangeSet,
+  GitFileHistory,
   ImpactSummary,
   RepositorySnapshot,
 } from '@codecausality/core';
@@ -23,6 +32,8 @@ interface CliOptions {
   repo: string;
   since?: string;
   workingTree: boolean;
+  output?: string;
+  configPath?: string;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -33,6 +44,8 @@ function parseArgs(argv: string[]): CliOptions {
   let repo = '.';
   let since: string | undefined;
   let workingTree = false;
+  let output: string | undefined;
+  let configPath: string | undefined;
 
   for (let i = 1; i < args.length; i += 1) {
     const arg = args[i];
@@ -48,12 +61,20 @@ function parseArgs(argv: string[]): CliOptions {
       since = value;
     } else if (arg === '--working-tree') {
       workingTree = true;
+    } else if (arg === '--output') {
+      const value = args[++i];
+      if (!value) throw new Error('Expected a file path after --output');
+      output = value;
+    } else if (arg === '--config') {
+      const value = args[++i];
+      if (!value) throw new Error('Expected a file path after --config');
+      configPath = value;
     } else if (!arg.startsWith('-')) {
       positional.push(arg);
     }
   }
 
-  return { command, positional, format, repo, since, workingTree };
+  return { command, positional, format, repo, since, workingTree, output, configPath };
 }
 
 function pretty(snapshot: RepositorySnapshot): string {
@@ -118,17 +139,32 @@ function prettyGitImpact(
   changeSet: GitChangeSet,
   ignoredFiles: string[],
   impact: ChangeSetImpactSummary,
+  ownership: FileOwnership[],
+  history: GitFileHistory[],
 ): string {
   const scope = changeSet.mode === 'ref' ? `since ${changeSet.baseRef}` : 'working tree';
+  const ownerLines = ownership
+    .filter((item) => item.owners.length > 0)
+    .map((item) => `  - ${item.file}: ${item.owners.join(', ')}`);
+  const historyLines = history
+    .filter((item) => item.commitCount > 0)
+    .sort((a, b) => b.churn - a.churn)
+    .slice(0, 5)
+    .map(
+      (item) =>
+        `  - ${item.file}: ${item.commitCount} commit(s), churn ${item.churn}, last touched by ${item.lastAuthor ?? 'unknown'}`,
+    );
+
   return [
     'CodeCausality Git Impact',
     `Scope: ${scope}`,
     `Changed files: ${changeSet.files.length}`,
     `Changed source files analyzed: ${impact.foundTargets.length}`,
-    `Non-source/unresolved files ignored: ${ignoredFiles.length}`,
+    `Non-source/ignored files: ${ignoredFiles.length}`,
     `Combined impact: ${impact.riskLevel} (${impact.impactScore}/100)`,
     `Affected files: ${impact.affectedFiles.length}`,
     `Affected tests: ${impact.affectedTests.length}`,
+    `Affected modules: ${impact.affectedModules.length}`,
     '',
     'Risk-ranked changed files:',
     ...(impact.rankedTargets.length > 0
@@ -138,9 +174,29 @@ function prettyGitImpact(
         )
       : ['  - No changed source files found in the current repository graph.']),
     '',
+    'Affected modules:',
+    ...(impact.affectedModules.length > 0
+      ? impact.affectedModules.map(
+          (item) =>
+            `  - ${item.module}: ${item.affectedFiles.length} file(s), ${item.affectedTests.length} test(s)`,
+        )
+      : ['  - None']),
+    '',
+    'CODEOWNERS:',
+    ...(ownerLines.length > 0 ? ownerLines : ['  - No owners resolved']),
+    '',
+    'History signals:',
+    ...(historyLines.length > 0 ? historyLines : ['  - No tracked history for changed source files']),
+    '',
     `Affected tests (${impact.affectedTests.length}):`,
     ...impact.affectedTests.map((file) => `  - ${file}`),
   ].join('\n');
+}
+
+async function writeJsonOutput(outputPath: string, value: unknown): Promise<void> {
+  const absolute = path.resolve(outputPath);
+  await mkdir(path.dirname(absolute), { recursive: true });
+  await writeFile(absolute, JSON.stringify(value, null, 2) + '\n', 'utf8');
 }
 
 async function main(): Promise<void> {
@@ -150,10 +206,13 @@ async function main(): Promise<void> {
     console.log(
       [
         'Usage:',
-        '  codecausality scan [path] [--format pretty|json|mermaid]',
-        '  codecausality impact <file> [--repo path] [--format pretty|json]',
-        '  codecausality impact --since <git-ref> [--repo path] [--format pretty|json]',
-        '  codecausality impact --working-tree [--repo path] [--format pretty|json]',
+        '  codecausality scan [path] [--format pretty|json|mermaid] [--config path]',
+        '  codecausality impact <file> [--repo path] [--format pretty|json] [--config path]',
+        '  codecausality impact --since <git-ref> [--repo path] [--output report.json]',
+        '  codecausality impact --working-tree [--repo path] [--output report.json]',
+        '',
+        'Config:',
+        '  .codecausality.json supports { "ignore": ["generated/**"], "moduleDepth": 2 }',
         '',
         'CodeCausality performs deterministic local analysis. No LLM or agent is required.',
       ].join('\n'),
@@ -162,11 +221,16 @@ async function main(): Promise<void> {
   }
 
   if (options.command === 'scan') {
-    const target = path.resolve(options.positional[0] ?? '.');
-    const snapshot = await analyzeRepository({ rootDir: target });
+    const rootDir = path.resolve(options.positional[0] ?? '.');
+    const config = await loadCodeCausalityConfig(rootDir, options.configPath);
+    const snapshot = await analyzeRepository({
+      rootDir,
+      ignorePatterns: config.ignore,
+    });
     if (options.format === 'json') console.log(JSON.stringify(snapshot, null, 2));
     else if (options.format === 'mermaid') console.log(toMermaid(snapshot.dependencies));
     else console.log(pretty(snapshot));
+    if (options.output) await writeJsonOutput(options.output, snapshot);
     return;
   }
 
@@ -176,7 +240,11 @@ async function main(): Promise<void> {
     }
 
     const rootDir = path.resolve(options.repo);
-    const snapshot = await analyzeRepository({ rootDir });
+    const config = await loadCodeCausalityConfig(rootDir, options.configPath);
+    const snapshot = await analyzeRepository({
+      rootDir,
+      ignorePatterns: config.ignore,
+    });
 
     if (options.since && options.workingTree) {
       throw new Error('Use either --since <git-ref> or --working-tree, not both');
@@ -193,13 +261,23 @@ async function main(): Promise<void> {
       const knownSourceFiles = new Set(snapshot.files.map((file) => file.path));
       const sourceTargets = changeSet.files.filter((file) => knownSourceFiles.has(file));
       const ignoredFiles = changeSet.files.filter((file) => !knownSourceFiles.has(file));
-      const impact = analyzeChangeSetImpact(snapshot, sourceTargets);
+      const impact = analyzeChangeSetImpact(snapshot, sourceTargets, {
+        moduleDepth: config.moduleDepth,
+      });
+      const ownership = resolveCodeOwners(await loadCodeOwners(rootDir), sourceTargets);
+      const history = await getGitFileHistory(rootDir, sourceTargets);
+      const report: CodeCausalityImpactReport = createImpactReport({
+        repositoryRoot: rootDir,
+        changeSet,
+        ignoredFiles,
+        impact,
+        ownership,
+        history,
+      });
 
-      if (options.format === 'json') {
-        console.log(JSON.stringify({ changeSet, ignoredFiles, impact }, null, 2));
-      } else {
-        console.log(prettyGitImpact(changeSet, ignoredFiles, impact));
-      }
+      if (options.output) await writeJsonOutput(options.output, report);
+      if (options.format === 'json') console.log(JSON.stringify(report, null, 2));
+      else console.log(prettyGitImpact(changeSet, ignoredFiles, impact, ownership, history));
       return;
     }
 
@@ -211,6 +289,7 @@ async function main(): Promise<void> {
     }
 
     const impact = analyzeImpact(snapshot, targetFile);
+    if (options.output) await writeJsonOutput(options.output, impact);
     if (options.format === 'json') console.log(JSON.stringify(impact, null, 2));
     else console.log(prettyImpact(impact));
     return;
