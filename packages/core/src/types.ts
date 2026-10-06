@@ -66,12 +66,21 @@ export interface ImpactSummary {
   evidence: string[];
 }
 
+export interface RankedTargetImpact {
+  target: string;
+  impactScore: number;
+  riskLevel: ImpactRiskLevel;
+  affectedFiles: number;
+  affectedTests: number;
+}
+
 export interface ChangeSetImpactSummary {
   targets: string[];
   foundTargets: string[];
   missingTargets: string[];
   affectedFiles: string[];
   affectedTests: string[];
+  rankedTargets: RankedTargetImpact[];
   impactScore: number;
   riskLevel: ImpactRiskLevel;
 }
