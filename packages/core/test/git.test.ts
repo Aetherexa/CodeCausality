@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
-import { getGitChangedFiles } from '../src/index.js';
+import { getGitChangedFiles, getGitFileHistory } from '../src/index.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -30,7 +30,7 @@ async function gitFixture(): Promise<string> {
   return root;
 }
 
-describe('getGitChangedFiles', () => {
+describe('Git intelligence', () => {
   it('returns files changed since a Git ref', async () => {
     const root = await gitFixture();
     const changeSet = await getGitChangedFiles({ rootDir: root, since: 'HEAD~1' });
@@ -49,5 +49,15 @@ describe('getGitChangedFiles', () => {
 
     expect(changeSet.mode).toBe('working-tree');
     expect(changeSet.files).toEqual(['src/new-file.ts', 'src/pricing.ts']);
+  });
+
+  it('returns churn and last-touch metadata for tracked files', async () => {
+    const root = await gitFixture();
+    const [history] = await getGitFileHistory(root, ['src/pricing.ts']);
+
+    expect(history?.commitCount).toBe(2);
+    expect(history?.churn).toBeGreaterThan(0);
+    expect(history?.lastAuthor).toBe('CodeCausality Test');
+    expect(history?.lastCommitSha).toBeTruthy();
   });
 });
