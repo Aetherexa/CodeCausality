@@ -92,6 +92,24 @@ describe('repository analysis', () => {
     expect(result.circularDependencies).toHaveLength(1);
   });
 
+  it('captures nested dynamic imports and excludes Node built-ins from package references', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'codecausality-dynamic-'));
+    await mkdir(path.join(root, 'src'));
+    await writeFile(path.join(root, 'src', 'lazy.ts'), "export const lazy = 1;\n");
+    await writeFile(
+      path.join(root, 'src', 'entry.ts'),
+      "import fs from 'fs';\nexport async function load() { return import('./lazy.js'); }\nvoid fs;\n",
+    );
+
+    const result = await analyzeRepository({ rootDir: root });
+    expect(result.dependencies).toContainEqual(
+      expect.objectContaining({ from: 'src/entry.ts', to: 'src/lazy.ts', kind: 'dynamic' }),
+    );
+    expect(
+      result.externalReferences.some((reference) => reference.packageName === 'fs'),
+    ).toBe(false);
+  });
+
   it('renders Mermaid dependency output', async () => {
     const root = await fixture();
     const result = await analyzeRepository({ rootDir: root });
