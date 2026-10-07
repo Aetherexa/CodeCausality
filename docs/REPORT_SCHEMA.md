@@ -13,47 +13,43 @@ codecausality impact --since main --format json --output .codecausality/impact.j
 ```json
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-10-06T00:00:00.000Z",
+  "generatedAt": "2026-10-07T00:00:00.000Z",
   "repositoryRoot": "/workspace/repository",
   "changeSet": {
     "mode": "ref",
     "baseRef": "main",
-    "files": ["src/pricing.ts"]
+    "files": ["src/ui/QuotePage.tsx"]
   },
   "ignoredFiles": [],
   "impact": {
-    "targets": ["src/pricing.ts"],
-    "foundTargets": ["src/pricing.ts"],
+    "targets": ["src/ui/QuotePage.tsx"],
+    "foundTargets": ["src/ui/QuotePage.tsx"],
     "missingTargets": [],
-    "affectedFiles": ["src/pricing.ts", "src/quote.ts"],
-    "affectedTests": ["src/__tests__/quote.test.ts"],
+    "affectedFiles": ["src/ui/QuotePage.tsx"],
+    "affectedTests": [],
     "affectedModules": [],
     "rankedTargets": [],
-    "impactScore": 32,
-    "riskLevel": "MEDIUM"
+    "impactScore": 12,
+    "riskLevel": "LOW"
   },
-  "ownership": [
+  "ownership": [],
+  "history": [],
+  "architectureViolations": [
     {
-      "file": "src/pricing.ts",
-      "owners": ["@pricing-team"],
-      "matchedPattern": "/src/pricing.ts"
-    }
-  ],
-  "history": [
-    {
-      "file": "src/pricing.ts",
-      "commitCount": 14,
-      "additions": 120,
-      "deletions": 38,
-      "churn": 158,
-      "lastCommitSha": "abc123",
-      "lastAuthor": "Developer",
-      "lastAuthorEmail": "developer@example.com",
-      "lastCommitDate": "2026-10-05T12:00:00+00:00"
+      "ruleName": "ui-must-not-access-data",
+      "severity": "error",
+      "from": "src/ui/QuotePage.tsx",
+      "to": "src/data/database.ts",
+      "specifier": "../data/database.js",
+      "kind": "static"
     }
   ]
 }
 ```
+
+## Architecture evidence
+
+Architecture violations are generated from directional dependency rules configured in `.codecausality.json`. Git-aware reports include only violations whose source file is inside the current affected surface, preventing unrelated legacy violations from polluting the current change report.
 
 ## Compatibility policy
 
