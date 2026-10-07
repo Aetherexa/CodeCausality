@@ -6,6 +6,7 @@ import {
   analyzeImpact,
   analyzeRepository,
   createImpactReport,
+  findArchitectureViolations,
   getGitChangedFiles,
   getGitFileHistory,
   loadCodeCausalityConfig,
@@ -14,6 +15,7 @@ import {
   toMermaid,
 } from '@codecausality/core';
 import type {
+  ArchitectureViolation,
   ChangeSetImpactSummary,
   CodeCausalityImpactReport,
   FileOwnership,
@@ -141,6 +143,7 @@ function prettyGitImpact(
   impact: ChangeSetImpactSummary,
   ownership: FileOwnership[],
   history: GitFileHistory[],
+  architectureViolations: ArchitectureViolation[],
 ): string {
   const scope = changeSet.mode === 'ref' ? `since ${changeSet.baseRef}` : 'working tree';
   const ownerLines = ownership
@@ -154,6 +157,10 @@ function prettyGitImpact(
       (item) =>
         `  - ${item.file}: ${item.commitCount} commit(s), churn ${item.churn}, last touched by ${item.lastAuthor ?? 'unknown'}`,
     );
+  const architectureLines = architectureViolations.map(
+    (violation) =>
+      `  - [${violation.severity.toUpperCase()}] ${violation.ruleName}: ${violation.from} -> ${violation.to}`,
+  );
 
   return [
     'CodeCausality Git Impact',
@@ -165,6 +172,7 @@ function prettyGitImpact(
     `Affected files: ${impact.affectedFiles.length}`,
     `Affected tests: ${impact.affectedTests.length}`,
     `Affected modules: ${impact.affectedModules.length}`,
+    `Architecture violations: ${architectureViolations.length}`,
     '',
     'Risk-ranked changed files:',
     ...(impact.rankedTargets.length > 0
@@ -181,6 +189,9 @@ function prettyGitImpact(
             `  - ${item.module}: ${item.affectedFiles.length} file(s), ${item.affectedTests.length} test(s)`,
         )
       : ['  - None']),
+    '',
+    'Architecture guardrails:',
+    ...(architectureLines.length > 0 ? architectureLines : ['  - No relevant violations']),
     '',
     'CODEOWNERS:',
     ...(ownerLines.length > 0 ? ownerLines : ['  - No owners resolved']),
@@ -212,7 +223,7 @@ async function main(): Promise<void> {
         '  codecausality impact --working-tree [--repo path] [--output report.json]',
         '',
         'Config:',
-        '  .codecausality.json supports { "ignore": ["generated/**"], "moduleDepth": 2 }',
+        '  .codecausality.json supports ignore, moduleDepth, and architecture.boundaries.',
         '',
         'CodeCausality performs deterministic local analysis. No LLM or agent is required.',
       ].join('\n'),
@@ -266,6 +277,11 @@ async function main(): Promise<void> {
       });
       const ownership = resolveCodeOwners(await loadCodeOwners(rootDir), sourceTargets);
       const history = await getGitFileHistory(rootDir, sourceTargets);
+      const affectedFiles = new Set(impact.affectedFiles);
+      const architectureViolations = findArchitectureViolations(
+        snapshot.dependencies,
+        config.architecture.boundaries,
+      ).filter((violation) => affectedFiles.has(violation.from));
       const report: CodeCausalityImpactReport = createImpactReport({
         repositoryRoot: rootDir,
         changeSet,
@@ -273,11 +289,23 @@ async function main(): Promise<void> {
         impact,
         ownership,
         history,
+        architectureViolations,
       });
 
       if (options.output) await writeJsonOutput(options.output, report);
       if (options.format === 'json') console.log(JSON.stringify(report, null, 2));
-      else console.log(prettyGitImpact(changeSet, ignoredFiles, impact, ownership, history));
+      else {
+        console.log(
+          prettyGitImpact(
+            changeSet,
+            ignoredFiles,
+            impact,
+            ownership,
+            history,
+            architectureViolations,
+          ),
+        );
+      }
       return;
     }
 
