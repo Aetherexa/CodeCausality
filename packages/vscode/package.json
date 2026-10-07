@@ -1,15 +1,43 @@
 {
-  "name": "@codecausality/vscode",
-  "displayName": "CodeCausality",
-  "description": "Change impact intelligence inside VS Code.",
+  "name": "codecausality",
+  "displayName": "CodeCausality — Change Impact Intelligence",
+  "description": "Trace code-change blast radius, affected tests, architecture violations, ownership, and Git history directly inside VS Code.",
   "version": "0.1.0",
-  "private": true,
   "publisher": "aetherexa",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
+  "preview": true,
+  "pricing": "Free",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aetherexa/CodeCausality.git"
+  },
+  "homepage": "https://github.com/Aetherexa/CodeCausality/tree/main/packages/vscode",
+  "bugs": {
+    "url": "https://github.com/Aetherexa/CodeCausality/issues"
+  },
+  "keywords": [
+    "change impact",
+    "blast radius",
+    "dependency graph",
+    "architecture",
+    "code review",
+    "affected tests",
+    "git",
+    "developer tools",
+    "static analysis",
+    "repository intelligence"
+  ],
   "engines": {
     "vscode": "^1.95.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Visualization",
+    "Testing",
+    "Other"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
   "main": "./dist/extension.js",
   "activationEvents": [
     "onView:codecausality.impactExplorer",
@@ -53,7 +81,9 @@
   },
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --outfile=dist/extension.js --sourcemap",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "vscode:prepublish": "npm run build",
+    "package:vsix": "npx --yes @vscode/vsce@4.0.0 package --no-dependencies"
   },
   "dependencies": {
     "@codecausality/core": "0.1.0"
