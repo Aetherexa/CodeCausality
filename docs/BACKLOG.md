@@ -41,7 +41,7 @@
 
 - [x] Add architecture boundary configuration.
 - [x] Add richer affected-test mapping heuristics.
-- [ ] Add GitHub Action.
-- [ ] Generate PR impact summary.
-- [ ] Publish recommended test surface.
-- [ ] Add evidence links for reviewers.
+- [x] Add GitHub Action.
+- [x] Generate PR impact summary.
+- [x] Publish recommended test surface.
+- [x] Add evidence links for reviewers.
