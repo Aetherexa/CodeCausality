@@ -19,10 +19,29 @@ import type {
   RecommendedTest,
 } from '@codecausality/core';
 
+interface ImpactGraphNode {
+  path: string;
+  depth: number;
+  row: number;
+  kind: 'changed' | 'affected' | 'test';
+}
+
+interface ImpactGraphEdge {
+  from: string;
+  to: string;
+}
+
+interface ImpactGraph {
+  nodes: ImpactGraphNode[];
+  edges: ImpactGraphEdge[];
+  truncated: boolean;
+}
+
 interface ExplorerModel {
   title: string;
   scope: string;
   impact: ChangeSetImpactSummary;
+  graph: ImpactGraph;
   recommendedTests: RecommendedTest[];
   architectureViolations: ArchitectureViolation[];
   ownership: FileOwnership[];
@@ -158,6 +177,7 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
       title,
       scope: workspace,
       impact,
+      graph: buildImpactGraph(snapshot.dependencies, impact),
       recommendedTests: recommendTests(snapshot, impact),
       architectureViolations,
       ownership,
@@ -294,6 +314,33 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     .error { color: var(--vscode-errorForeground); }
     .warning { color: var(--vscode-editorWarning-foreground); }
     .empty { color: var(--vscode-descriptionForeground); padding: 16px 0; }
+    .graph-scroll {
+      overflow: auto;
+      border: 1px solid var(--vscode-panel-border);
+      background: var(--vscode-editor-background);
+    }
+    .graph-scroll svg { display: block; }
+    .graph-edge {
+      stroke: var(--vscode-descriptionForeground);
+      stroke-width: 1.2;
+      opacity: 0.55;
+    }
+    .graph-node rect {
+      fill: var(--vscode-sideBar-background);
+      stroke: var(--vscode-panel-border);
+      stroke-width: 1;
+    }
+    .graph-node.changed rect { stroke: var(--vscode-focusBorder); stroke-width: 2; }
+    .graph-node.test rect { stroke-dasharray: 4 3; }
+    .graph-node text {
+      fill: var(--vscode-foreground);
+      font-size: 11px;
+      pointer-events: none;
+    }
+    .graph-node { cursor: pointer; }
+    .graph-node:hover rect { stroke: var(--vscode-textLink-foreground); stroke-width: 2; }
+    .graph-legend { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
+    .legend-item { color: var(--vscode-descriptionForeground); font-size: 11px; }
   </style>
 </head>
 <body>
@@ -337,6 +384,9 @@ function renderModel(model: ExplorerModel): string {
         <div class="metric"><strong>${model.recommendedTests.length}</strong>tests</div>
       </div>
     </section>
+
+    <h3>Impact graph</h3>
+    ${renderImpactGraph(model.graph)}
 
     <h3>Affected files</h3>
     <ul>
@@ -420,4 +470,162 @@ function normalizePath(value: string): string {
 
 function createNonce(): string {
   return Array.from({ length: 24 }, () => Math.random().toString(36).slice(2, 3)).join('');
+}
+
+
+function buildImpactGraph(
+  dependencies: Array<{ from: string; to: string }>,
+  impact: ChangeSetImpactSummary,
+  maxNodes = 40,
+): ImpactGraph {
+  const affected = new Set(impact.affectedFiles);
+  const tests = new Set(impact.affectedTests);
+  const changed = new Set(impact.foundTargets);
+  const reverse = new Map<string, string[]>();
+
+  for (const edge of dependencies) {
+    if (!affected.has(edge.from) || !affected.has(edge.to)) continue;
+    const dependents = reverse.get(edge.to) ?? [];
+    dependents.push(edge.from);
+    reverse.set(edge.to, dependents);
+  }
+
+  const depth = new Map<string, number>();
+  const queue = [...impact.foundTargets];
+  for (const target of queue) depth.set(target, 0);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) continue;
+    const nextDepth = (depth.get(current) ?? 0) + 1;
+
+    for (const dependent of reverse.get(current) ?? []) {
+      const existing = depth.get(dependent);
+      if (existing === undefined || nextDepth < existing) {
+        depth.set(dependent, nextDepth);
+        queue.push(dependent);
+      }
+    }
+  }
+
+  const ordered = [...affected].sort((a, b) => {
+    const da = depth.get(a) ?? Number.MAX_SAFE_INTEGER;
+    const db = depth.get(b) ?? Number.MAX_SAFE_INTEGER;
+    return da - db || a.localeCompare(b);
+  });
+  const selected = ordered.slice(0, maxNodes);
+  const selectedSet = new Set(selected);
+  const fallbackDepth = Math.max(0, ...[...depth.values()]) + 1;
+  const rowsByDepth = new Map<number, number>();
+
+  const nodes = selected.map((file): ImpactGraphNode => {
+    const nodeDepth = depth.get(file) ?? fallbackDepth;
+    const row = rowsByDepth.get(nodeDepth) ?? 0;
+    rowsByDepth.set(nodeDepth, row + 1);
+
+    return {
+      path: file,
+      depth: nodeDepth,
+      row,
+      kind: changed.has(file) ? 'changed' : tests.has(file) ? 'test' : 'affected',
+    };
+  });
+
+  const edges: ImpactGraphEdge[] = dependencies
+    .filter(
+      (edge) =>
+        selectedSet.has(edge.from) &&
+        selectedSet.has(edge.to) &&
+        affected.has(edge.from) &&
+        affected.has(edge.to),
+    )
+    .map((edge) => ({
+      from: edge.to,
+      to: edge.from,
+    }));
+
+  return {
+    nodes,
+    edges,
+    truncated: affected.size > maxNodes,
+  };
+}
+
+function renderImpactGraph(graph: ImpactGraph): string {
+  if (graph.nodes.length === 0) {
+    return '<div class="empty">No impact graph available for this analysis.</div>';
+  }
+
+  const nodeWidth = 180;
+  const nodeHeight = 42;
+  const columnGap = 70;
+  const rowGap = 20;
+  const margin = 16;
+  const maxDepth = Math.max(...graph.nodes.map((node) => node.depth));
+  const maxRows = Math.max(
+    1,
+    ...Array.from({ length: maxDepth + 1 }, (_, depth) =>
+      graph.nodes.filter((node) => node.depth === depth).length,
+    ),
+  );
+  const width = margin * 2 + (maxDepth + 1) * nodeWidth + maxDepth * columnGap;
+  const height = margin * 2 + maxRows * nodeHeight + Math.max(0, maxRows - 1) * rowGap;
+  const positions = new Map<string, { x: number; y: number }>();
+
+  for (const node of graph.nodes) {
+    positions.set(node.path, {
+      x: margin + node.depth * (nodeWidth + columnGap),
+      y: margin + node.row * (nodeHeight + rowGap),
+    });
+  }
+
+  const edgeSvg = graph.edges
+    .map((edge) => {
+      const from = positions.get(edge.from);
+      const to = positions.get(edge.to);
+      if (!from || !to) return '';
+      const x1 = from.x + nodeWidth;
+      const y1 = from.y + nodeHeight / 2;
+      const x2 = to.x;
+      const y2 = to.y + nodeHeight / 2;
+      const midX = x1 + (x2 - x1) / 2;
+      return `<path class="graph-edge" d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" fill="none" marker-end="url(#arrow)" />`;
+    })
+    .join('');
+
+  const nodeSvg = graph.nodes
+    .map((node) => {
+      const position = positions.get(node.path);
+      if (!position) return '';
+      const label = shortenPath(node.path, 27);
+      return `<g class="graph-node ${node.kind}" data-file="${escapeHtml(node.path)}" transform="translate(${position.x}, ${position.y})">
+        <rect width="${nodeWidth}" height="${nodeHeight}" rx="4" />
+        <text x="10" y="18">${escapeHtml(label)}</text>
+        <text x="10" y="33" class="meta">${escapeHtml(node.kind)}</text>
+      </g>`;
+    })
+    .join('');
+
+  return `<div class="graph-legend">
+      <span class="legend-item">Changed = solid focus border</span>
+      <span class="legend-item">Test = dashed border</span>
+      <span class="legend-item">Arrows = impact propagation</span>
+    </div>
+    <div class="graph-scroll">
+      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="CodeCausality impact graph">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--vscode-descriptionForeground)" />
+          </marker>
+        </defs>
+        ${edgeSvg}
+        ${nodeSvg}
+      </svg>
+    </div>
+    ${graph.truncated ? '<div class="meta">Graph limited to the first 40 impacted files. List evidence remains complete.</div>' : ''}`;
+}
+
+function shortenPath(file: string, maxLength: number): string {
+  if (file.length <= maxLength) return file;
+  return '…' + file.slice(-(maxLength - 1));
 }
