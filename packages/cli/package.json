@@ -3,15 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": { "codecausality": "dist/index.js" },
+  "bin": {
+    "codecausality": "dist/index.js"
+  },
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": { "@codecausality/core": "0.1.0" },
+  "dependencies": {
+    "@codecausality/core": "0.1.0"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

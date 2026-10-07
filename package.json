@@ -5,7 +5,7 @@
   "description": "Local-first change impact intelligence for software repositories.",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "workspaces": [
     "packages/*"
@@ -19,8 +19,8 @@
     "format:check": "prettier --check .",
     "package:vscode": "npm run package:vsix -w codecausality",
     "quality": "npm run lint && npm run typecheck && npm run test:coverage && npm run test -w @codecausality/mcp && npm run build",
-    "check": "npm run quality",
-    "package:vsix": "npm run package:vscode"
+    "check": "pnpm run lint && pnpm --filter @codecausality/core run build && pnpm -r --if-present run typecheck && pnpm --filter @codecausality/core run test:coverage && pnpm --filter @codecausality/mcp run test && pnpm -r --if-present run build",
+    "package:vsix": "pnpm --filter @codecausality/core run build && pnpm --filter codecausality run package:vsix:pnpm"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -31,5 +31,6 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0",
     "vitest": "^3.0.0"
-  }
+  },
+  "packageManager": "pnpm@11.28.0"
 }
