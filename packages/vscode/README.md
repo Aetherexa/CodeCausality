@@ -1,24 +1,89 @@
-# CodeCausality for VS Code
+# CodeCausality — Change Impact Intelligence
 
-This package is the first CodeCausality developer surface. It reuses `@codecausality/core` directly and does not introduce a second analysis engine.
+**Trace change. Understand impact.**
 
-## Current capabilities
+CodeCausality brings deterministic change-impact intelligence directly into VS Code. Before you edit, review, or merge code, inspect the likely blast radius without uploading the repository to an AI provider.
 
-- **Analyze Current File** — computes blast radius for the active source file.
-- **Analyze Working Tree** — detects changed Git source files and analyzes their combined impact.
-- **Impact Explorer** — shows risk, affected files/modules, recommended tests, architecture violations, CODEOWNERS and Git-history evidence.
-- **Impact Graph** — visualizes change propagation across affected files; changed files use a focus border, test nodes use a dashed border, and every node is clickable.
-- **Graph Focus Controls** — filter by path or node type (changed, affected, tests), reset instantly, and keep only relevant edges visible.
-- **Evidence navigation** — click a file/test/violation path to open it directly in VS Code.
+## Highlights
 
-Baseline analysis is local and deterministic. No LLM provider or token consumption is required.
+- **Analyze Current File** — calculate direct and transitive downstream impact for the active source file.
+- **Analyze Working Tree** — detect changed Git source files and analyze their combined blast radius.
+- **Interactive Impact Graph** — visualize change propagation and open evidence directly from graph nodes.
+- **Graph Focus Controls** — search by path and filter changed, affected, or test nodes.
+- **Recommended Tests** — surface graph-derived and deterministic heuristic test recommendations.
+- **Architecture Guardrails** — highlight configured dependency-boundary violations.
+- **Ownership & History** — show CODEOWNERS and Git churn/last-touch evidence.
+- **Local-first** — baseline analysis is deterministic and consumes no LLM tokens.
+
+## Quick start
+
+1. Open a Git repository in VS Code.
+2. Open **Explorer → CodeCausality Impact**.
+3. Choose **Current file** or **Working tree**.
+4. Review risk, affected files/modules, recommended tests, architecture violations, and the impact graph.
+5. Click any evidence path or graph node to open the corresponding file.
+
+The same commands are also available from the Command Palette:
+
+- `CodeCausality: Analyze Current File`
+- `CodeCausality: Analyze Working Tree`
+
+## Repository configuration
+
+CodeCausality reads `.codecausality.json` from the workspace root.
+
+```json
+{
+  "ignore": ["generated/**", "vendor/**"],
+  "moduleDepth": 2,
+  "architecture": {
+    "boundaries": [
+      {
+        "name": "ui-must-not-access-data",
+        "from": ["src/ui/**"],
+        "disallow": ["src/data/**"],
+        "severity": "error"
+      }
+    ]
+  }
+}
+```
+
+## Privacy and cost
+
+The VS Code extension reuses the local `@codecausality/core` engine. Baseline analysis reads repository files and local Git metadata on the developer machine. It does not require an LLM provider, API key, cloud agent, or token budget.
+
+## Current language depth
+
+The initial relationship analyzer is strongest for JavaScript and TypeScript repositories. The normalized CodeCausality graph model is designed for additional language analyzers in later releases.
+
+## Install from VSIX
+
+A packaged build can be installed manually:
+
+```bash
+code --install-extension codecausality-0.1.0.vsix
+```
+
+Or use **Extensions → … → Install from VSIX…** inside VS Code.
 
 ## Development
 
+From the repository root:
+
 ```bash
 npm install
-npm run build -w @codecausality/vscode
-npm run typecheck -w @codecausality/vscode
+npm run build -w codecausality
+npm run typecheck -w codecausality
+npm run package:vscode
 ```
 
-Open the repository in VS Code and launch an Extension Development Host with the extension package as the development extension.
+## Links
+
+- Repository: https://github.com/Aetherexa/CodeCausality
+- Issues: https://github.com/Aetherexa/CodeCausality/issues
+- Architecture: https://github.com/Aetherexa/CodeCausality/blob/main/docs/ARCHITECTURE.md
+
+## License
+
+MIT

@@ -58,4 +58,6 @@
 - [x] Include extension typecheck and bundle in monorepo quality gates.
 - [x] Add interactive dependency graph visualization.
 - [x] Add selection/focus controls for large impact graphs.
-- [ ] Package the extension for Marketplace distribution.
+- [x] Package the extension for Marketplace distribution.
+- [ ] Verify/create the `aetherexa` Visual Studio Marketplace publisher.
+- [ ] Publish the first Preview release after publisher authentication is configured.
