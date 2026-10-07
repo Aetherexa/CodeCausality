@@ -35,8 +35,8 @@
 
 ## v0.4 — Developer Surfaces
 
-- VS Code extension
-- interactive graph and impact explorer
+- VS Code extension (foundation implemented)
+- interactive graph and impact explorer (impact explorer implemented; graph visualization next)
 - MCP adapter
 - compact AI context bundles
 
