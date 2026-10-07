@@ -46,7 +46,7 @@ export function createContextBundle(
   const bundle: CodeCausalityContextBundle = {
     schemaVersion: CONTEXT_BUNDLE_SCHEMA_VERSION,
     kind: 'change-impact',
-    generatedAt: new Date().toISOString(),
+    generatedAt: report.generatedAt,
     focus: {
       mode: report.changeSet.mode,
       baseRef: report.changeSet.baseRef,
@@ -68,7 +68,7 @@ export function createContextBundle(
     },
     budget: {
       maxChars,
-      usedChars: 0,
+      usedChars: maxChars,
       truncated: false,
     },
   };
@@ -95,7 +95,7 @@ export function createContextBundle(
   }
 
   bundle.budget.truncated = omitted;
-  bundle.budget.usedChars = serializedSize(bundle);
+  settleUsedChars(bundle);
   return bundle;
 }
 
@@ -114,6 +114,14 @@ function tryAppend(
 
   target.pop();
   return false;
+}
+
+function settleUsedChars(bundle: CodeCausalityContextBundle): void {
+  let previous = -1;
+  while (bundle.budget.usedChars !== previous) {
+    previous = bundle.budget.usedChars;
+    bundle.budget.usedChars = serializedSize(bundle);
+  }
 }
 
 function serializedSize(value: unknown): number {
