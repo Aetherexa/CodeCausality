@@ -11,8 +11,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @codecausality/core && npm run build -w @codecausality/cli",
-    "typecheck": "npm run typecheck -w @codecausality/core && npm run build -w @codecausality/core && npm run typecheck -w @codecausality/cli",
+    "build": "npm run build -w @codecausality/core && npm run build -w @codecausality/cli && npm run build -w @codecausality/vscode",
+    "typecheck": "npm run typecheck -w @codecausality/core && npm run build -w @codecausality/core && npm run typecheck -w @codecausality/cli && npm run typecheck -w @codecausality/vscode",
     "test": "npm run test -w @codecausality/core",
     "test:coverage": "npm run test:coverage -w @codecausality/core",
     "lint": "eslint .",
