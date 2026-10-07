@@ -6,6 +6,7 @@ import {
   analyzeFileForMcp,
   analyzeSinceForMcp,
   analyzeWorkingTreeForMcp,
+  createContextBundleForMcp,
   scanRepositoryForMcp,
 } from './service.js';
 
@@ -71,6 +72,21 @@ export function createCodeCausalityServer(): McpServer {
     },
     async ({ baseRef, rootDir, maxItems }) =>
       toolResult(await analyzeSinceForMcp(baseRef, { rootDir, maxItems })),
+  );
+
+  server.registerTool(
+    'codecausality_context_bundle',
+    {
+      description:
+        'Build a versioned, size-bounded AI context bundle from CodeCausality change evidence. Omit baseRef to analyze the working tree.',
+      inputSchema: z.object({
+        baseRef: z.string().min(1).optional(),
+        rootDir: z.string().optional(),
+        maxChars: z.number().int().min(1500).max(100000).optional(),
+      }),
+    },
+    async ({ baseRef, rootDir, maxChars }) =>
+      toolResult(await createContextBundleForMcp(baseRef, { rootDir, maxChars })),
   );
 
   return server;
