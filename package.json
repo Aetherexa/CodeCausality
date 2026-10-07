@@ -1,26 +1,25 @@
 {
   "name": "codecausality-monorepo",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Local-first change impact intelligence for software repositories.",
   "license": "MIT",
+  "packageManager": "pnpm@10.17.1",
   "engines": {
     "node": ">=22"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
-    "build": "npm run build -w @codecausality/core && npm run build -w @codecausality/cli && npm run build -w codecausality && npm run build -w @codecausality/mcp",
-    "typecheck": "npm run typecheck -w @codecausality/core && npm run build -w @codecausality/core && npm run typecheck -w @codecausality/cli && npm run typecheck -w codecausality && npm run typecheck -w @codecausality/mcp",
-    "test": "npm run test -w @codecausality/core && npm run test -w @codecausality/mcp",
-    "test:coverage": "npm run test:coverage -w @codecausality/core",
+    "build": "pnpm build:packages && pnpm --filter codecausality build",
+    "build:packages": "tsc -b packages/core packages/cli packages/mcp",
+    "typecheck": "tsc -b --pretty false",
+    "test": "pnpm --filter @codecausality/core test && pnpm --filter @codecausality/mcp test",
+    "test:coverage": "pnpm --filter @codecausality/core test:coverage",
     "lint": "eslint .",
     "format:check": "prettier --check .",
-    "package:vscode": "npm run package:vsix -w codecausality",
-    "quality": "npm run lint && npm run typecheck && npm run test:coverage && npm run test -w @codecausality/mcp && npm run build",
-    "check": "pnpm run lint && pnpm --filter @codecausality/core run build && pnpm -r --if-present run typecheck && pnpm --filter @codecausality/core run test:coverage && pnpm --filter @codecausality/mcp run test && pnpm -r --if-present run build",
-    "package:vsix": "pnpm --filter @codecausality/core run build && pnpm --filter codecausality run package:vsix:pnpm"
+    "check": "pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm --filter @codecausality/mcp test && pnpm build",
+    "quality": "pnpm check",
+    "package:vsix": "pnpm --filter codecausality package:vsix",
+    "package:vscode": "pnpm package:vsix"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -28,9 +27,8 @@
     "@vitest/coverage-v8": "^3.0.0",
     "eslint": "^9.0.0",
     "prettier": "^3.0.0",
-    "typescript": "^5.7.0",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.0.0",
     "vitest": "^3.0.0"
-  },
-  "packageManager": "pnpm@11.28.0"
+  }
 }
