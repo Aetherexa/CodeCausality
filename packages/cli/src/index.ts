@@ -5,6 +5,7 @@ import {
   analyzeChangeSetImpact,
   analyzeImpact,
   analyzeRepository,
+  createContextBundle,
   createImpactReport,
   findArchitectureViolations,
   getGitChangedFiles,
@@ -18,6 +19,7 @@ import {
 import type {
   ArchitectureViolation,
   ChangeSetImpactSummary,
+  CodeCausalityContextBundle,
   CodeCausalityImpactReport,
   FileOwnership,
   GitChangeSet,
@@ -38,6 +40,7 @@ interface CliOptions {
   workingTree: boolean;
   output?: string;
   configPath?: string;
+  maxChars?: number;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -50,6 +53,7 @@ function parseArgs(argv: string[]): CliOptions {
   let workingTree = false;
   let output: string | undefined;
   let configPath: string | undefined;
+  let maxChars: number | undefined;
 
   for (let i = 1; i < args.length; i += 1) {
     const arg = args[i];
@@ -73,12 +77,28 @@ function parseArgs(argv: string[]): CliOptions {
       const value = args[++i];
       if (!value) throw new Error('Expected a file path after --config');
       configPath = value;
+    } else if (arg === '--max-chars') {
+      const value = Number(args[++i]);
+      if (!Number.isFinite(value) || value <= 0) {
+        throw new Error('Expected a positive number after --max-chars');
+      }
+      maxChars = Math.floor(value);
     } else if (!arg.startsWith('-')) {
       positional.push(arg);
     }
   }
 
-  return { command, positional, format, repo, since, workingTree, output, configPath };
+  return {
+    command,
+    positional,
+    format,
+    repo,
+    since,
+    workingTree,
+    output,
+    configPath,
+    maxChars,
+  };
 }
 
 function pretty(snapshot: RepositorySnapshot): string {
@@ -215,10 +235,95 @@ function prettyGitImpact(
   ].join('\n');
 }
 
+function prettyContextBundle(bundle: CodeCausalityContextBundle): string {
+  const scope =
+    bundle.focus.mode === 'ref'
+      ? `since ${bundle.focus.baseRef ?? 'unknown ref'}`
+      : 'working tree';
+
+  return [
+    'CodeCausality Context Bundle',
+    `Scope: ${scope}`,
+    `Risk: ${bundle.focus.riskLevel} (${bundle.focus.impactScore}/100)`,
+    `Changed source files: ${bundle.focus.changedSourceFileCount}`,
+    `Affected files: ${bundle.focus.affectedFileCount}`,
+    `Affected tests: ${bundle.focus.affectedTestCount}`,
+    `Budget: ${bundle.budget.usedChars}/${bundle.budget.maxChars} chars`,
+    `Truncated: ${bundle.budget.truncated ? 'yes' : 'no'}`,
+    '',
+    'Evidence included:',
+    `  Changed files: ${bundle.evidence.changedFiles.length}`,
+    `  Architecture violations: ${bundle.evidence.architectureViolations.length}`,
+    `  Recommended tests: ${bundle.evidence.recommendedTests.length}`,
+    `  Affected tests: ${bundle.evidence.affectedTests.length}`,
+    `  Affected modules: ${bundle.evidence.affectedModules.length}`,
+    `  Affected files: ${bundle.evidence.affectedFiles.length}`,
+    `  Ownership entries: ${bundle.evidence.ownership.length}`,
+    `  History entries: ${bundle.evidence.history.length}`,
+  ].join('\n');
+}
+
 async function writeJsonOutput(outputPath: string, value: unknown): Promise<void> {
   const absolute = path.resolve(outputPath);
   await mkdir(path.dirname(absolute), { recursive: true });
   await writeFile(absolute, JSON.stringify(value, null, 2) + '\n', 'utf8');
+}
+
+async function buildGitImpactReport(
+  rootDir: string,
+  since: string | undefined,
+  configPath: string | undefined,
+): Promise<{
+  report: CodeCausalityImpactReport;
+  changeSet: GitChangeSet;
+  ignoredFiles: string[];
+  impact: ChangeSetImpactSummary;
+  ownership: FileOwnership[];
+  history: GitFileHistory[];
+  architectureViolations: ArchitectureViolation[];
+  recommendedTests: RecommendedTest[];
+}> {
+  const config = await loadCodeCausalityConfig(rootDir, configPath);
+  const snapshot = await analyzeRepository({
+    rootDir,
+    ignorePatterns: config.ignore,
+  });
+  const changeSet = await getGitChangedFiles({ rootDir, since });
+  const knownSourceFiles = new Set(snapshot.files.map((file) => file.path));
+  const sourceTargets = changeSet.files.filter((file) => knownSourceFiles.has(file));
+  const ignoredFiles = changeSet.files.filter((file) => !knownSourceFiles.has(file));
+  const impact = analyzeChangeSetImpact(snapshot, sourceTargets, {
+    moduleDepth: config.moduleDepth,
+  });
+  const ownership = resolveCodeOwners(await loadCodeOwners(rootDir), sourceTargets);
+  const history = await getGitFileHistory(rootDir, sourceTargets);
+  const affectedFiles = new Set(impact.affectedFiles);
+  const architectureViolations = findArchitectureViolations(
+    snapshot.dependencies,
+    config.architecture.boundaries,
+  ).filter((violation) => affectedFiles.has(violation.from));
+  const recommendedTests = recommendTests(snapshot, impact);
+  const report = createImpactReport({
+    repositoryRoot: rootDir,
+    changeSet,
+    ignoredFiles,
+    impact,
+    ownership,
+    history,
+    architectureViolations,
+    recommendedTests,
+  });
+
+  return {
+    report,
+    changeSet,
+    ignoredFiles,
+    impact,
+    ownership,
+    history,
+    architectureViolations,
+    recommendedTests,
+  };
 }
 
 async function main(): Promise<void> {
@@ -232,6 +337,11 @@ async function main(): Promise<void> {
         '  codecausality impact <file> [--repo path] [--format pretty|json] [--config path]',
         '  codecausality impact --since <git-ref> [--repo path] [--output report.json]',
         '  codecausality impact --working-tree [--repo path] [--output report.json]',
+        '  codecausality context --since <git-ref> [--repo path] [--max-chars 12000] [--output context.json]',
+        '  codecausality context --working-tree [--repo path] [--max-chars 12000] [--output context.json]',
+        '',
+        'Context bundles:',
+        '  Compact, deterministic evidence for AI workflows. No LLM call is used to build them.',
         '',
         'Config:',
         '  .codecausality.json supports ignore, moduleDepth, and architecture.boundaries.',
@@ -262,11 +372,6 @@ async function main(): Promise<void> {
     }
 
     const rootDir = path.resolve(options.repo);
-    const config = await loadCodeCausalityConfig(rootDir, options.configPath);
-    const snapshot = await analyzeRepository({
-      rootDir,
-      ignorePatterns: config.ignore,
-    });
 
     if (options.since && options.workingTree) {
       throw new Error('Use either --since <git-ref> or --working-tree, not both');
@@ -279,50 +384,31 @@ async function main(): Promise<void> {
         );
       }
 
-      const changeSet = await getGitChangedFiles({ rootDir, since: options.since });
-      const knownSourceFiles = new Set(snapshot.files.map((file) => file.path));
-      const sourceTargets = changeSet.files.filter((file) => knownSourceFiles.has(file));
-      const ignoredFiles = changeSet.files.filter((file) => !knownSourceFiles.has(file));
-      const impact = analyzeChangeSetImpact(snapshot, sourceTargets, {
-        moduleDepth: config.moduleDepth,
-      });
-      const ownership = resolveCodeOwners(await loadCodeOwners(rootDir), sourceTargets);
-      const history = await getGitFileHistory(rootDir, sourceTargets);
-      const affectedFiles = new Set(impact.affectedFiles);
-      const architectureViolations = findArchitectureViolations(
-        snapshot.dependencies,
-        config.architecture.boundaries,
-      ).filter((violation) => affectedFiles.has(violation.from));
-      const recommendedTests = recommendTests(snapshot, impact);
-      const report: CodeCausalityImpactReport = createImpactReport({
-        repositoryRoot: rootDir,
-        changeSet,
-        ignoredFiles,
-        impact,
-        ownership,
-        history,
-        architectureViolations,
-        recommendedTests,
-      });
+      const result = await buildGitImpactReport(rootDir, options.since, options.configPath);
 
-      if (options.output) await writeJsonOutput(options.output, report);
-      if (options.format === 'json') console.log(JSON.stringify(report, null, 2));
+      if (options.output) await writeJsonOutput(options.output, result.report);
+      if (options.format === 'json') console.log(JSON.stringify(result.report, null, 2));
       else {
         console.log(
           prettyGitImpact(
-            changeSet,
-            ignoredFiles,
-            impact,
-            ownership,
-            history,
-            architectureViolations,
-            recommendedTests,
+            result.changeSet,
+            result.ignoredFiles,
+            result.impact,
+            result.ownership,
+            result.history,
+            result.architectureViolations,
+            result.recommendedTests,
           ),
         );
       }
       return;
     }
 
+    const config = await loadCodeCausalityConfig(rootDir, options.configPath);
+    const snapshot = await analyzeRepository({
+      rootDir,
+      ignorePatterns: config.ignore,
+    });
     const targetFile = options.positional[0];
     if (!targetFile) {
       throw new Error(
@@ -334,6 +420,35 @@ async function main(): Promise<void> {
     if (options.output) await writeJsonOutput(options.output, impact);
     if (options.format === 'json') console.log(JSON.stringify(impact, null, 2));
     else console.log(prettyImpact(impact));
+    return;
+  }
+
+  if (options.command === 'context') {
+    if (options.format === 'mermaid') {
+      throw new Error('Mermaid output is not supported by context bundles');
+    }
+    if (options.since && options.workingTree) {
+      throw new Error('Use either --since <git-ref> or --working-tree, not both');
+    }
+    if (!options.since && !options.workingTree) {
+      throw new Error(
+        'Usage: codecausality context --since <git-ref> or context --working-tree',
+      );
+    }
+    if (options.positional.length > 0) {
+      throw new Error('Context bundles currently support Git change sets, not positional files');
+    }
+
+    const rootDir = path.resolve(options.repo);
+    const { report } = await buildGitImpactReport(rootDir, options.since, options.configPath);
+    const bundle = createContextBundle(report, { maxChars: options.maxChars });
+
+    if (options.output) await writeJsonOutput(options.output, bundle);
+    if (options.format === 'json' || !options.output) {
+      console.log(JSON.stringify(bundle, null, 2));
+    } else {
+      console.log(prettyContextBundle(bundle));
+    }
     return;
   }
 
