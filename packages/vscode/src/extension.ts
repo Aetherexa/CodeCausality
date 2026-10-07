@@ -341,6 +341,23 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     .graph-node:hover rect { stroke: var(--vscode-textLink-foreground); stroke-width: 2; }
     .graph-legend { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
     .legend-item { color: var(--vscode-descriptionForeground); font-size: 11px; }
+    .graph-controls {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) auto auto;
+      gap: 6px;
+      margin: 6px 0;
+    }
+    .graph-controls input,
+    .graph-controls select {
+      min-width: 0;
+      border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+      color: var(--vscode-input-foreground);
+      background: var(--vscode-input-background);
+      padding: 5px 7px;
+      font: inherit;
+    }
+    .graph-node.filtered,
+    .graph-edge.filtered { display: none; }
   </style>
 </head>
 <body>
@@ -362,6 +379,46 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
       element.addEventListener('click', () => {
         vscode.postMessage({ type: 'openFile', path: element.getAttribute('data-file') });
       });
+      element.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          vscode.postMessage({ type: 'openFile', path: element.getAttribute('data-file') });
+        }
+      });
+    });
+
+    const graphSearch = document.querySelector('[data-graph-search]');
+    const graphKind = document.querySelector('[data-graph-kind]');
+    const graphReset = document.querySelector('[data-graph-reset]');
+
+    const applyGraphFilters = () => {
+      const query = (graphSearch?.value ?? '').trim().toLowerCase();
+      const kind = graphKind?.value ?? 'all';
+      const visible = new Set();
+
+      document.querySelectorAll('.graph-node[data-path]').forEach((node) => {
+        const nodePath = node.getAttribute('data-path') ?? '';
+        const nodeKind = node.getAttribute('data-kind') ?? '';
+        const matchesQuery = !query || nodePath.toLowerCase().includes(query);
+        const matchesKind = kind === 'all' || nodeKind === kind;
+        const show = matchesQuery && matchesKind;
+        node.classList.toggle('filtered', !show);
+        if (show) visible.add(nodePath);
+      });
+
+      document.querySelectorAll('.graph-edge[data-from][data-to]').forEach((edge) => {
+        const from = edge.getAttribute('data-from') ?? '';
+        const to = edge.getAttribute('data-to') ?? '';
+        edge.classList.toggle('filtered', !visible.has(from) || !visible.has(to));
+      });
+    };
+
+    graphSearch?.addEventListener('input', applyGraphFilters);
+    graphKind?.addEventListener('change', applyGraphFilters);
+    graphReset?.addEventListener('click', () => {
+      if (graphSearch) graphSearch.value = '';
+      if (graphKind) graphKind.value = 'all';
+      applyGraphFilters();
     });
   </script>
 </body>
@@ -589,7 +646,7 @@ function renderImpactGraph(graph: ImpactGraph): string {
       const x2 = to.x;
       const y2 = to.y + nodeHeight / 2;
       const midX = x1 + (x2 - x1) / 2;
-      return `<path class="graph-edge" d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" fill="none" marker-end="url(#arrow)" />`;
+      return `<path class="graph-edge" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" fill="none" marker-end="url(#arrow)" />`;
     })
     .join('');
 
@@ -598,7 +655,7 @@ function renderImpactGraph(graph: ImpactGraph): string {
       const position = positions.get(node.path);
       if (!position) return '';
       const label = shortenPath(node.path, 27);
-      return `<g class="graph-node ${node.kind}" data-file="${escapeHtml(node.path)}" transform="translate(${position.x}, ${position.y})">
+      return `<g class="graph-node ${node.kind}" data-file="${escapeHtml(node.path)}" data-path="${escapeHtml(node.path)}" data-kind="${node.kind}" tabindex="0" transform="translate(${position.x}, ${position.y})">
         <rect width="${nodeWidth}" height="${nodeHeight}" rx="4" />
         <text x="10" y="18">${escapeHtml(label)}</text>
         <text x="10" y="33" class="meta">${escapeHtml(node.kind)}</text>
@@ -606,7 +663,17 @@ function renderImpactGraph(graph: ImpactGraph): string {
     })
     .join('');
 
-  return `<div class="graph-legend">
+  return `<div class="graph-controls">
+      <input type="search" data-graph-search placeholder="Filter graph by path" aria-label="Filter graph by path" />
+      <select data-graph-kind aria-label="Filter graph by node type">
+        <option value="all">All nodes</option>
+        <option value="changed">Changed</option>
+        <option value="affected">Affected</option>
+        <option value="test">Tests</option>
+      </select>
+      <button type="button" data-graph-reset>Reset</button>
+    </div>
+    <div class="graph-legend">
       <span class="legend-item">Changed = solid focus border</span>
       <span class="legend-item">Test = dashed border</span>
       <span class="legend-item">Arrows = impact propagation</span>
