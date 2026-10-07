@@ -90,7 +90,11 @@ describe('context bundles', () => {
     expect(size).toBeLessThanOrEqual(1_500);
     expect(bundle.budget.maxChars).toBe(1_500);
     expect(bundle.budget.truncated).toBe(true);
-    expect(bundle.evidence.affectedFiles.length).toBeLessThan(30);
+    expect(
+      bundle.evidence.affectedFiles.length +
+        bundle.evidence.ownership.length +
+        bundle.evidence.history.length,
+    ).toBeLessThan(32);
   });
 
   it('uses a stable default budget', () => {
