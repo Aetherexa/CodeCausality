@@ -57,5 +57,5 @@
 - [x] Open evidence files directly from the explorer.
 - [x] Include extension typecheck and bundle in monorepo quality gates.
 - [x] Add interactive dependency graph visualization.
-- [ ] Add selection/focus controls for large impact graphs.
+- [x] Add selection/focus controls for large impact graphs.
 - [ ] Package the extension for Marketplace distribution.
