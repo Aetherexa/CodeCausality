@@ -1,0 +1,148 @@
+name: CodeCausality PR Impact
+description: Analyze pull-request change impact, architecture guardrails, and recommended tests.
+author: Aetherexa
+
+inputs:
+  base-ref:
+    description: Base Git ref to compare against. Defaults to GITHUB_BASE_REF or main.
+    required: false
+    default: ''
+  report-path:
+    description: Repository-relative JSON report output path.
+    required: false
+    default: .codecausality/impact.json
+  fail-on-architecture-error:
+    description: Fail the action when an error-severity architecture violation is detected.
+    required: false
+    default: 'false'
+
+outputs:
+  impact-score:
+    description: Combined CodeCausality impact score.
+    value: ${{ steps.publish.outputs.impact-score }}
+  risk-level:
+    description: Combined impact risk level.
+    value: ${{ steps.publish.outputs.risk-level }}
+  architecture-errors:
+    description: Number of error-severity architecture violations.
+    value: ${{ steps.publish.outputs.architecture-errors }}
+  recommended-tests:
+    description: Number of recommended tests.
+    value: ${{ steps.publish.outputs.recommended-tests }}
+  report-path:
+    description: Absolute path to the generated CodeCausality report.
+    value: ${{ steps.publish.outputs.report-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve comparison base
+      id: base
+      shell: bash
+      run: |
+        BASE_REF="${{ inputs.base-ref }}"
+        if [ -z "$BASE_REF" ]; then
+          BASE_REF="${GITHUB_BASE_REF:-main}"
+        fi
+        echo "base-ref=$BASE_REF" >> "$GITHUB_OUTPUT"
+
+    - name: Install CodeCausality
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm install --no-audit --no-fund
+
+    - name: Build CodeCausality
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm run build
+
+    - name: Fetch base ref
+      shell: bash
+      run: |
+        git -C "$GITHUB_WORKSPACE" fetch origin "${{ steps.base.outputs.base-ref }}" --depth=1
+
+    - name: Analyze PR impact
+      shell: bash
+      env:
+        BASE_REF: ${{ steps.base.outputs.base-ref }}
+        REPORT_PATH: ${{ inputs.report-path }}
+      run: |
+        mkdir -p "$GITHUB_WORKSPACE/$(dirname "$REPORT_PATH")"
+        node "${{ github.action_path }}/packages/cli/dist/index.js" impact           --since "origin/$BASE_REF"           --repo "$GITHUB_WORKSPACE"           --format json           --output "$GITHUB_WORKSPACE/$REPORT_PATH"           > "$RUNNER_TEMP/codecausality-output.json"
+
+    - name: Publish CodeCausality summary
+      id: publish
+      shell: bash
+      env:
+        REPORT_PATH: ${{ inputs.report-path }}
+        FAIL_ON_ARCHITECTURE_ERROR: ${{ inputs.fail-on-architecture-error }}
+      run: |
+        node <<'NODE'
+        const fs = require('node:fs');
+        const path = require('node:path');
+
+        const reportPath = path.resolve(process.env.GITHUB_WORKSPACE, process.env.REPORT_PATH);
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+        const architectureErrors = report.architectureViolations.filter(
+          (item) => item.severity === 'error',
+        ).length;
+        const recommendedTests = report.recommendedTests.length;
+
+        fs.appendFileSync(
+          process.env.GITHUB_OUTPUT,
+          [
+            `impact-score=${report.impact.impactScore}`,
+            `risk-level=${report.impact.riskLevel}`,
+            `architecture-errors=${architectureErrors}`,
+            `recommended-tests=${recommendedTests}`,
+            `report-path=${reportPath}`,
+            '',
+          ].join('\n'),
+        );
+
+        const summary = [
+          '# CodeCausality PR Impact',
+          '',
+          '| Signal | Result |',
+          '| --- | --- |',
+          `| Risk | **${report.impact.riskLevel}** (${report.impact.impactScore}/100) |`,
+          `| Changed source files | ${report.impact.foundTargets.length} |`,
+          `| Affected files | ${report.impact.affectedFiles.length} |`,
+          `| Affected modules | ${report.impact.affectedModules.length} |`,
+          `| Architecture violations | ${report.architectureViolations.length} (${architectureErrors} errors) |`,
+          `| Recommended tests | ${recommendedTests} |`,
+          '',
+          '## Recommended tests',
+          '',
+          ...(report.recommendedTests.length
+            ? report.recommendedTests.map(
+                (test) =>
+                  `- **${test.confidence.toUpperCase()}** — \`${test.path}\` (${test.reasons.join(', ')})`,
+              )
+            : ['- No deterministic test recommendations.']),
+          '',
+          '## Architecture guardrails',
+          '',
+          ...(report.architectureViolations.length
+            ? report.architectureViolations.map(
+                (item) =>
+                  `- **${item.severity.toUpperCase()}** — ${item.ruleName}: \`${item.from}\` → \`${item.to}\``,
+              )
+            : ['- No relevant architecture violations.']),
+          '',
+          `Report: \`${process.env.REPORT_PATH}\``,
+          '',
+        ].join('\n');
+
+        fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+
+        if (
+          process.env.FAIL_ON_ARCHITECTURE_ERROR.toLowerCase() === 'true' &&
+          architectureErrors > 0
+        ) {
+          console.error(
+            `CodeCausality found ${architectureErrors} error-severity architecture violation(s).`,
+          );
+          process.exit(2);
+        }
+        NODE
