@@ -15,6 +15,7 @@ CodeCausality is a local-first change impact intelligence engine for software re
 - Identifies affected tests and impacted modules.
 - Computes Git-aware change-set impact with `impact --since <ref>` or `impact --working-tree`.
 - Adds CODEOWNERS and Git churn/last-touch evidence for changed source files.
+- Enforces configurable architecture dependency boundaries.
 - Supports repository-specific ignore patterns through `.codecausality.json`.
 - Emits versioned JSON impact reports that can be persisted for CI/PR integrations.
 - Records external package *usage references* for enrichment, without becoming a package-management analyzer.
@@ -56,9 +57,21 @@ Create `.codecausality.json` at the repository root:
     "generated/**",
     "vendor/**"
   ],
-  "moduleDepth": 2
+  "moduleDepth": 2,
+  "architecture": {
+    "boundaries": [
+      {
+        "name": "ui-must-not-access-data",
+        "from": ["src/ui/**"],
+        "disallow": ["src/data/**"],
+        "severity": "error"
+      }
+    ]
+  }
 }
 ```
+
+Architecture boundaries are directional: the example flags dependency edges originating in `src/ui/**` that target `src/data/**`. Severity can be `error` or `warning`.
 
 Use `--config <path>` to load a different configuration file.
 
@@ -81,6 +94,7 @@ Source relationship graph
    +--> affected tests
    +--> affected modules
    +--> ownership / churn
+   +--> architecture guardrails
    |
    v
 Versioned impact report
