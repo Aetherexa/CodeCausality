@@ -16,6 +16,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run quality
+      - name: Package VS Code extension
+        run: npm run package:vscode
+      - name: Verify VSIX
+        shell: bash
+        run: |
+          test -n "$(find packages/vscode -maxdepth 1 -name 'codecausality-*.vsix' -print -quit)"
+      - name: Upload VSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecausality-vsix
+          path: packages/vscode/codecausality-*.vsix
+          retention-days: 7
