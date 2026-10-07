@@ -1,4 +1,5 @@
 export { analyzeRepository } from './analyzer.js';
+export { findArchitectureViolations } from './architecture.js';
 export { loadCodeCausalityConfig } from './config.js';
 export { analyzeImpact, analyzeChangeSetImpact } from './impact.js';
 export { getGitChangedFiles, getGitFileHistory } from './git.js';
@@ -12,6 +13,11 @@ export {
   IMPACT_REPORT_SCHEMA_VERSION,
 } from './report.js';
 export { toMermaid } from './mermaid.js';
+export type {
+  ArchitectureBoundaryRule,
+  ArchitectureViolation,
+  ArchitectureViolationSeverity,
+} from './architecture.js';
 export type {
   AnalysisOptions,
   RepositorySnapshot,

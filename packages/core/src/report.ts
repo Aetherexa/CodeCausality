@@ -1,3 +1,4 @@
+import type { ArchitectureViolation } from './architecture.js';
 import type { GitChangeSet, GitFileHistory } from './git.js';
 import type { FileOwnership } from './ownership.js';
 import type { ChangeSetImpactSummary } from './types.js';
@@ -13,6 +14,7 @@ export interface CodeCausalityImpactReport {
   impact: ChangeSetImpactSummary;
   ownership: FileOwnership[];
   history: GitFileHistory[];
+  architectureViolations: ArchitectureViolation[];
 }
 
 export function createImpactReport(input: {
@@ -22,6 +24,7 @@ export function createImpactReport(input: {
   impact: ChangeSetImpactSummary;
   ownership?: FileOwnership[];
   history?: GitFileHistory[];
+  architectureViolations?: ArchitectureViolation[];
 }): CodeCausalityImpactReport {
   return {
     schemaVersion: IMPACT_REPORT_SCHEMA_VERSION,
@@ -32,5 +35,6 @@ export function createImpactReport(input: {
     impact: input.impact,
     ownership: [...(input.ownership ?? [])].sort((a, b) => a.file.localeCompare(b.file)),
     history: [...(input.history ?? [])].sort((a, b) => a.file.localeCompare(b.file)),
+    architectureViolations: [...(input.architectureViolations ?? [])],
   };
 }
