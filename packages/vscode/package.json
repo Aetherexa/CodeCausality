@@ -1,0 +1,67 @@
+{
+  "name": "@codecausality/vscode",
+  "displayName": "CodeCausality",
+  "description": "Change impact intelligence inside VS Code.",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "aetherexa",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["Other"],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onView:codecausality.impactExplorer",
+    "onCommand:codecausality.analyzeCurrentFile",
+    "onCommand:codecausality.analyzeWorkingTree"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "codecausality.analyzeCurrentFile",
+        "title": "CodeCausality: Analyze Current File"
+      },
+      {
+        "command": "codecausality.analyzeWorkingTree",
+        "title": "CodeCausality: Analyze Working Tree"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "codecausality.impactExplorer",
+          "name": "CodeCausality Impact"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "codecausality.analyzeCurrentFile",
+          "when": "view == codecausality.impactExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "codecausality.analyzeWorkingTree",
+          "when": "view == codecausality.impactExplorer",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --outfile=dist/extension.js --sourcemap",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@codecausality/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.95.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  }
+}
