@@ -12,6 +12,7 @@ export {
   createImpactReport,
   IMPACT_REPORT_SCHEMA_VERSION,
 } from './report.js';
+export { recommendTests } from './testRecommendations.js';
 export { toMermaid } from './mermaid.js';
 export type {
   ArchitectureBoundaryRule,
@@ -36,3 +37,8 @@ export type { CodeCausalityConfig } from './config.js';
 export type { GitChangedFilesOptions, GitChangeSet, GitFileHistory } from './git.js';
 export type { CodeOwnerRule, FileOwnership } from './ownership.js';
 export type { CodeCausalityImpactReport } from './report.js';
+export type {
+  RecommendedTest,
+  TestRecommendationConfidence,
+  TestRecommendationReason,
+} from './testRecommendations.js';
