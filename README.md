@@ -18,6 +18,7 @@ CodeCausality is a local-first change impact intelligence engine for software re
 - Enforces configurable architecture dependency boundaries.
 - Supports repository-specific ignore patterns through `.codecausality.json`.
 - Emits versioned JSON impact reports that can be persisted for CI/PR integrations.
+- Builds compact, size-bounded AI context bundles from prioritized change evidence.
 - Records external package *usage references* for enrichment, without becoming a package-management analyzer.
 
 ## What it deliberately does not do
@@ -43,9 +44,32 @@ codecausality impact src/services/pricing.ts
 codecausality impact --since main
 codecausality impact --working-tree
 codecausality impact --since main --output .codecausality/impact.json
+
+# Compact AI context bundles
+codecausality context --since main --max-chars 12000
+codecausality context --working-tree --output .codecausality/context.json
 ```
 
 Git-aware JSON output uses a stable versioned report contract. See [`docs/REPORT_SCHEMA.md`](docs/REPORT_SCHEMA.md).
+
+### Compact AI context
+
+The `context` command converts deterministic CodeCausality evidence into a versioned, bounded JSON bundle designed for AI workflows.
+
+Evidence is prioritized before generic repository context:
+
+1. changed source files
+2. architecture violations
+3. recommended tests
+4. affected tests
+5. affected modules
+6. affected files
+7. ownership
+8. Git history
+
+The default budget is **12,000 serialized characters**. Use `--max-chars` to change it. The bundle reports `usedChars`, `maxChars`, and whether lower-priority evidence was truncated.
+
+No LLM call is used to build the bundle; Copilot Toolkit, MCP hosts, or other AI clients can consume the resulting JSON directly.
 
 ## Repository configuration
 
@@ -99,9 +123,16 @@ Source relationship graph
    v
 Versioned impact report
    |
-   +--> CLI today
-   +--> GitHub Action next
-   +--> VS Code / MCP later
+   +--> CLI
+   +--> GitHub Action
+   +--> VS Code
+   +--> MCP
+   |
+   v
+Compact context bundle
+   |
+   +--> Copilot Toolkit
+   +--> MCP/AI hosts
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/PRODUCT.md`](docs/PRODUCT.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
