@@ -34,18 +34,26 @@ codecausality impact --since main --format json --output .codecausality/impact.j
   },
   "ownership": [],
   "history": [],
-  "architectureViolations": [
+  "architectureViolations": [],
+  "recommendedTests": [
     {
-      "ruleName": "ui-must-not-access-data",
-      "severity": "error",
-      "from": "src/ui/QuotePage.tsx",
-      "to": "src/data/database.ts",
-      "specifier": "../data/database.js",
-      "kind": "static"
+      "path": "src/ui/__tests__/QuotePage.test.tsx",
+      "confidence": "high",
+      "reasons": ["matching-source-name"]
     }
   ]
 }
 ```
+
+## Test recommendation evidence
+
+Recommendations are deterministic and currently use three evidence classes:
+
+- `dependency-graph` — the test is already inside the computed dependency blast radius.
+- `matching-source-name` — the test name matches an affected source file.
+- `same-module` — the test is colocated with an affected source module.
+
+Graph and matching-name evidence are high confidence. Module proximity is medium confidence.
 
 ## Architecture evidence
 
