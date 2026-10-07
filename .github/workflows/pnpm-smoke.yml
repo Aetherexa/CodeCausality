@@ -1,0 +1,43 @@
+name: pnpm Smoke
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pnpm-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.28.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install workspace with pnpm
+        shell: pwsh
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run pnpm quality alias
+        shell: pwsh
+        run: pnpm check
+
+      - name: Build VSIX through pnpm alias
+        shell: pwsh
+        run: pnpm package:vsix
+
+      - name: Verify VSIX
+        shell: pwsh
+        run: |
+          $vsix = Get-ChildItem packages/vscode/codecausality-*.vsix | Select-Object -First 1
+          if (-not $vsix) { throw "VSIX was not generated" }
+          Write-Host "Generated $($vsix.FullName)"
