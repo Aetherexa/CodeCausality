@@ -22,7 +22,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 11.28.0
+          version: 10.17.1
           run_install: false
 
       - uses: actions/setup-node@v4
@@ -39,17 +39,18 @@ jobs:
         shell: pwsh
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run pnpm quality alias
+      - name: Check
         shell: pwsh
         run: pnpm check
 
-      - name: Build VSIX through pnpm alias
+      - name: Package VSIX
         shell: pwsh
         run: pnpm package:vsix
 
       - name: Verify VSIX
         shell: pwsh
         run: |
-          $vsix = Get-ChildItem packages/vscode/codecausality-*.vsix | Select-Object -First 1
-          if (-not $vsix) { throw "VSIX was not generated" }
-          Write-Host "Generated $($vsix.FullName)"
+          if (-not (Test-Path "artifacts/codecausality-1.0.0.vsix")) {
+            throw "VSIX was not generated"
+          }
+          Write-Host "Generated artifacts/codecausality-1.0.0.vsix"
