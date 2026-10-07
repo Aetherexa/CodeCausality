@@ -12,6 +12,7 @@ import {
   loadCodeCausalityConfig,
   loadCodeOwners,
   resolveCodeOwners,
+  recommendTests,
   toMermaid,
 } from '@codecausality/core';
 import type {
@@ -23,6 +24,7 @@ import type {
   GitFileHistory,
   ImpactSummary,
   RepositorySnapshot,
+  RecommendedTest,
 } from '@codecausality/core';
 
 type OutputFormat = 'pretty' | 'json' | 'mermaid';
@@ -144,6 +146,7 @@ function prettyGitImpact(
   ownership: FileOwnership[],
   history: GitFileHistory[],
   architectureViolations: ArchitectureViolation[],
+  recommendedTests: RecommendedTest[],
 ): string {
   const scope = changeSet.mode === 'ref' ? `since ${changeSet.baseRef}` : 'working tree';
   const ownerLines = ownership
@@ -161,6 +164,10 @@ function prettyGitImpact(
     (violation) =>
       `  - [${violation.severity.toUpperCase()}] ${violation.ruleName}: ${violation.from} -> ${violation.to}`,
   );
+  const recommendedTestLines = recommendedTests.map(
+    (test) =>
+      `  - [${test.confidence.toUpperCase()}] ${test.path} (${test.reasons.join(', ')})`,
+  );
 
   return [
     'CodeCausality Git Impact',
@@ -173,6 +180,7 @@ function prettyGitImpact(
     `Affected tests: ${impact.affectedTests.length}`,
     `Affected modules: ${impact.affectedModules.length}`,
     `Architecture violations: ${architectureViolations.length}`,
+    `Recommended tests: ${recommendedTests.length}`,
     '',
     'Risk-ranked changed files:',
     ...(impact.rankedTargets.length > 0
@@ -192,6 +200,9 @@ function prettyGitImpact(
     '',
     'Architecture guardrails:',
     ...(architectureLines.length > 0 ? architectureLines : ['  - No relevant violations']),
+    '',
+    'Recommended test surface:',
+    ...(recommendedTestLines.length > 0 ? recommendedTestLines : ['  - No deterministic recommendations']),
     '',
     'CODEOWNERS:',
     ...(ownerLines.length > 0 ? ownerLines : ['  - No owners resolved']),
@@ -282,6 +293,7 @@ async function main(): Promise<void> {
         snapshot.dependencies,
         config.architecture.boundaries,
       ).filter((violation) => affectedFiles.has(violation.from));
+      const recommendedTests = recommendTests(snapshot, impact);
       const report: CodeCausalityImpactReport = createImpactReport({
         repositoryRoot: rootDir,
         changeSet,
@@ -290,6 +302,7 @@ async function main(): Promise<void> {
         ownership,
         history,
         architectureViolations,
+        recommendedTests,
       });
 
       if (options.output) await writeJsonOutput(options.output, report);
@@ -303,6 +316,7 @@ async function main(): Promise<void> {
             ownership,
             history,
             architectureViolations,
+            recommendedTests,
           ),
         );
       }
