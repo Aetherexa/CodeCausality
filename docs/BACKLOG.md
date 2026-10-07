@@ -81,7 +81,7 @@
 - [x] Add deterministic character budget.
 - [x] Prioritize changed files, architecture violations, recommended tests and test evidence.
 - [x] Add truncation metadata and regression tests.
-- [ ] Add CLI context-bundle export.
+- [x] Add CLI context-bundle export.
 - [ ] Add MCP context-bundle tool.
 - [ ] Add optional bounded source snippets.
 - [ ] Integrate the bundle with Copilot Toolkit context workflows.
