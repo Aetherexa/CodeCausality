@@ -46,15 +46,22 @@ runs:
         fi
         echo "base-ref=$BASE_REF" >> "$GITHUB_OUTPUT"
 
+    - name: Setup pnpm
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        corepack enable
+        corepack prepare pnpm@10.17.1 --activate
+
     - name: Install CodeCausality
       shell: bash
       working-directory: ${{ github.action_path }}
-      run: npm install --no-audit --no-fund
+      run: pnpm install --no-frozen-lockfile
 
-    - name: Build CodeCausality
+    - name: Build CodeCausality CLI
       shell: bash
       working-directory: ${{ github.action_path }}
-      run: npm run build
+      run: pnpm build:packages
 
     - name: Fetch base ref
       shell: bash
