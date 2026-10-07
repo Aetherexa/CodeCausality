@@ -56,6 +56,6 @@
 - [x] Render risk, affected files/modules, recommended tests and architecture violations.
 - [x] Open evidence files directly from the explorer.
 - [x] Include extension typecheck and bundle in monorepo quality gates.
-- [ ] Add interactive dependency graph visualization.
+- [x] Add interactive dependency graph visualization.
 - [ ] Add selection/focus controls for large impact graphs.
 - [ ] Package the extension for Marketplace distribution.
