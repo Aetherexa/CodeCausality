@@ -38,7 +38,7 @@
 - VS Code extension (foundation implemented)
 - interactive graph and impact explorer (impact explorer implemented; graph visualization next)
 - MCP adapter (stdio tool foundation implemented)
-- compact AI context bundles
+- compact AI context bundles (core budgeted bundle contract started)
 
 ## v1.0 — Change Intelligence Platform
 
