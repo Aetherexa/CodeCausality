@@ -45,3 +45,17 @@
 - [x] Generate PR impact summary.
 - [x] Publish recommended test surface.
 - [x] Add evidence links for reviewers.
+
+
+## Sprint 4 — VS Code developer surface
+
+- [x] Add VS Code extension workspace.
+- [x] Add Impact Explorer webview.
+- [x] Analyze the active source file.
+- [x] Analyze the current Git working tree.
+- [x] Render risk, affected files/modules, recommended tests and architecture violations.
+- [x] Open evidence files directly from the explorer.
+- [x] Include extension typecheck and bundle in monorepo quality gates.
+- [ ] Add interactive dependency graph visualization.
+- [ ] Add selection/focus controls for large impact graphs.
+- [ ] Package the extension for Marketplace distribution.
