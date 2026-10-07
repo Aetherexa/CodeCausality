@@ -1,4 +1,5 @@
 export { analyzeRepository } from './analyzer.js';
+export { createContextBundle, CONTEXT_BUNDLE_SCHEMA_VERSION } from './contextBundle.js';
 export { findArchitectureViolations } from './architecture.js';
 export { loadCodeCausalityConfig } from './config.js';
 export { analyzeImpact, analyzeChangeSetImpact } from './impact.js';
@@ -19,6 +20,7 @@ export type {
   ArchitectureViolation,
   ArchitectureViolationSeverity,
 } from './architecture.js';
+export type { CodeCausalityContextBundle, ContextBundleBudget, ContextBundleOptions } from './contextBundle.js';
 export type {
   AnalysisOptions,
   RepositorySnapshot,
