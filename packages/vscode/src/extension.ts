@@ -74,6 +74,8 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
         await this.analyzeCurrentFile();
       } else if (payload.type === 'analyzeWorkingTree') {
         await this.analyzeWorkingTree();
+      } else if (payload.type === 'openGettingStarted') {
+        await openGettingStarted();
       }
     });
 
@@ -243,14 +245,25 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('codecausality.analyzeWorkingTree', () =>
       provider.analyzeWorkingTree(),
     ),
+    vscode.commands.registerCommand('codecausality.openGettingStarted', () =>
+      openGettingStarted(),
+    ),
   );
 }
 
 export function deactivate(): void {}
 
+async function openGettingStarted(): Promise<void> {
+  await vscode.commands.executeCommand(
+    'workbench.action.openWalkthrough',
+    'aetherexa.codecausality#codecausality.gettingStarted',
+    false,
+  );
+}
+
 function renderHtml(model: ExplorerModel | undefined, status: string): string {
   const nonce = createNonce();
-  const body = model ? renderModel(model) : '<div class="empty">No analysis yet.</div>';
+  const body = model ? renderModel(model) : renderWelcome();
 
   return `<!doctype html>
 <html>
@@ -314,6 +327,17 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     .error { color: var(--vscode-errorForeground); }
     .warning { color: var(--vscode-editorWarning-foreground); }
     .empty { color: var(--vscode-descriptionForeground); padding: 16px 0; }
+    .welcome {
+      border: 1px solid var(--vscode-panel-border);
+      padding: 14px;
+      margin-top: 4px;
+      background: var(--vscode-editor-background);
+    }
+    .welcome h2 { margin: 0 0 6px; font-size: 16px; }
+    .welcome p { margin: 6px 0; line-height: 1.45; }
+    .welcome ol { padding-left: 20px; margin: 10px 0; }
+    .welcome li { border: 0; padding: 3px 0; }
+    .welcome-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
     .graph-scroll {
       overflow: auto;
       border: 1px solid var(--vscode-panel-border);
@@ -374,6 +398,9 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     });
     document.querySelector('[data-command="workingTree"]')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'analyzeWorkingTree' });
+    });
+    document.querySelector('[data-command="gettingStarted"]')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'openGettingStarted' });
     });
     document.querySelectorAll('[data-file]').forEach((element) => {
       element.addEventListener('click', () => {
@@ -695,4 +722,26 @@ function renderImpactGraph(graph: ImpactGraph): string {
 function shortenPath(file: string, maxLength: number): string {
   if (file.length <= maxLength) return file;
   return '…' + file.slice(-(maxLength - 1));
+}
+
+
+function renderWelcome(): string {
+  return `
+    <section class="welcome">
+      <h2>Understand the impact before you change the code.</h2>
+      <p>
+        CodeCausality maps source relationships locally and shows the likely blast radius
+        of a file or your current Git changes.
+      </p>
+      <ol>
+        <li>Open a JavaScript or TypeScript repository.</li>
+        <li>Choose <strong>Current file</strong> or <strong>Working tree</strong>.</li>
+        <li>Review affected files, tests, modules, architecture rules, and history evidence.</li>
+      </ol>
+      <p class="meta">Local-first. No account, API key, cloud upload, or telemetry required.</p>
+      <div class="welcome-actions">
+        <button data-command="gettingStarted">Getting started</button>
+      </div>
+    </section>
+  `;
 }
