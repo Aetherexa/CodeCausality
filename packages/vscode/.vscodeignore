@@ -1,0 +1,8 @@
+src/**
+tsconfig.json
+build.mjs
+**/*.map
+**/*.tsbuildinfo
+node_modules/**
+*.vsix
+.DS_Store
