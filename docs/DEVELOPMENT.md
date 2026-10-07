@@ -16,9 +16,9 @@ pnpm check
 pnpm package:vsix
 ```
 
-`pnpm check` is an alias for the full quality gate.
+`pnpm check` runs a pnpm-native quality path. It builds `@codecausality/core` first so TypeScript consumers can resolve its generated declarations, then runs workspace typechecks/tests/builds.
 
-`pnpm package:vsix` builds the production VS Code package through the same root packaging flow used in CI.
+`pnpm package:vsix` builds the core package first, bundles the VS Code extension with pnpm workspace links, and packages the production VSIX.
 
 The repository includes `pnpm-workspace.yaml`, so pnpm recognizes every package under `packages/*` and links matching local workspace packages instead of treating the monorepo as a single package.
 
@@ -47,7 +47,7 @@ Remove-Item -Force yarn.lock -ErrorAction SilentlyContinue
 pnpm install
 ```
 
-Keep `pnpm-lock.yaml` if pnpm is the package manager you intend to use locally.
+After changing workspace structure or switching package managers, regenerate `pnpm-lock.yaml` once. A stale lock/node_modules tree can leave `@codecausality/core` unlinked even though the workspace file exists.
 
 ## Packaging output
 
