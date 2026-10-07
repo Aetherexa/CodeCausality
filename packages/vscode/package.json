@@ -27,6 +27,13 @@
     "static analysis",
     "repository intelligence"
   ],
+  "files": [
+    "dist/extension.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json"
+  ],
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -85,10 +92,8 @@
     "vscode:prepublish": "npm run build",
     "package:vsix": "npx --yes @vscode/vsce@4.0.0 package --no-dependencies"
   },
-  "dependencies": {
-    "@codecausality/core": "0.1.0"
-  },
   "devDependencies": {
+    "@codecausality/core": "0.1.0",
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.95.0",
     "esbuild": "^0.24.0",
