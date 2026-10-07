@@ -61,3 +61,15 @@
 - [x] Package the extension for Marketplace distribution.
 - [ ] Verify/create the `aetherexa` Visual Studio Marketplace publisher.
 - [ ] Publish the first Preview release after publisher authentication is configured.
+
+
+## Sprint 5 — MCP adapter
+
+- [x] Add thin `@codecausality/mcp` workspace.
+- [x] Use the current MCP TypeScript server SDK v2.
+- [x] Expose repository scan, file impact, working-tree impact and ref impact tools.
+- [x] Default to compact bounded evidence responses.
+- [x] Serve over stdio without LLM/token dependency.
+- [x] Keep ForgeMCP as the reusable MCP framework boundary.
+- [ ] Add MCP resources for persisted impact reports.
+- [ ] Add host integration examples for VS Code, Claude Code and Cursor.
