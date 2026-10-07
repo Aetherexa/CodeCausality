@@ -1,87 +1,60 @@
 # Development Setup
 
-CodeCausality supports npm workspaces and pnpm for local development and V1 release packaging.
+CodeCausality now uses the same monorepo build pattern as StackGenome.
 
-## Node.js compatibility
+## Toolchain
 
-CodeCausality development and packaging support **all currently supported Node.js release lines**:
+- pnpm 10.17.1
+- Node.js 22+ for repository development
+- TypeScript project references
+- local workspace dependencies declared with `workspace:*`
 
-- Node.js 22
-- Node.js 24
-- Node.js 26
-
-The repository declares `node >=22` and the Windows pnpm smoke workflow executes the complete install, quality, and VSIX packaging flow on all three versions.
-
-Node.js 20 and older are not official targets because they are end-of-life. The VS Code extension itself does **not** require the end user to install Node.js; VS Code provides the extension runtime. The Node requirement applies to repository development, CLI/MCP execution, and local VSIX packaging.
-
-## pnpm
-
-From the repository root:
+## Install
 
 ```powershell
+corepack enable
+corepack prepare pnpm@10.17.1 --activate
 pnpm install
+```
+
+## Validate
+
+```powershell
 pnpm check
+```
+
+The root TypeScript build graph resolves internal packages through project references and path aliases. CLI, MCP, and the VS Code extension all reference `@codecausality/core` as a workspace package.
+
+## Package the VS Code extension
+
+```powershell
 pnpm package:vsix
 ```
 
-`pnpm check` runs a pnpm-native quality path. It builds `@codecausality/core` first so TypeScript consumers can resolve its generated declarations, then runs workspace typechecks/tests/builds.
-
-`pnpm package:vsix` builds the core package first, bundles the VS Code extension with pnpm workspace links, and packages the production VSIX.
-
-The repository includes `pnpm-workspace.yaml`, so pnpm recognizes every package under `packages/*` and links matching local workspace packages.
-
-## npm
-
-The existing npm workspace flow remains supported:
-
-```powershell
-npm install
-npm run quality
-npm run package:vscode
-```
-
-## Do not mix package managers in one working tree
-
-Avoid running Yarn, npm, and pnpm installs over the same existing `node_modules` tree. Their linking/layout strategies differ and can produce misleading filesystem errors.
-
-If you already mixed them, clean once before reinstalling:
-
-```powershell
-Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
-Get-ChildItem packages -Directory | ForEach-Object {
-  Remove-Item -Recurse -Force "$($_.FullName)\node_modules" -ErrorAction SilentlyContinue
-}
-Remove-Item -Force yarn.lock -ErrorAction SilentlyContinue
-Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue
-Remove-Item -Force pnpm-lock.yaml -ErrorAction SilentlyContinue
-
-pnpm store prune
-pnpm install
-```
-
-After changing workspace structure or switching package managers, regenerate `pnpm-lock.yaml` once. A stale lock/node_modules tree can leave `@codecausality/core` unlinked even though the workspace file exists.
-
-## Verify workspace links
-
-Before debugging TypeScript errors, confirm pnpm linked the internal package:
-
-```powershell
-Get-ChildItem .\packages\cli\node_modules\@codecausality
-Get-ChildItem .\packages\vscode\node_modules\@codecausality
-```
-
-Both should contain `core`.
-
-## Packaging output
-
-A successful VSIX build creates:
+Output:
 
 ```text
-packages/vscode/codecausality-1.0.0.vsix
+artifacts/codecausality-1.0.0.vsix
 ```
 
-Install it with:
+Install locally:
 
 ```powershell
-code --install-extension .\packages\vscode\codecausality-1.0.0.vsix
+code --install-extension .\artifacts\codecausality-1.0.0.vsix
 ```
+
+## Why this layout
+
+This mirrors StackGenome's proven build strategy:
+
+- `pnpm-workspace.yaml` defines the monorepo.
+- internal package dependencies use `workspace:*`.
+- `tsconfig.json` at the root defines project references.
+- `tsconfig.base.json` provides source path aliases.
+- packages use `composite: true`.
+- package builds use `tsc -b`.
+- the VS Code extension is bundled with esbuild through `build.mjs`.
+- `@vscode/vsce` is installed locally instead of being downloaded at packaging time.
+- CI runs the same pnpm commands developers run locally.
+
+Do not mix npm, Yarn, and pnpm installs in the same working tree.
