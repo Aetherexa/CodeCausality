@@ -36,6 +36,20 @@ jobs:
           path: .codecausality/impact.json
 ```
 
+## Reviewer evidence links
+
+The GitHub Step Summary is review-oriented. File evidence is linked against the exact checked-out commit so reviewers can navigate directly from the impact summary to repository evidence.
+
+The summary links:
+
+- changed source files
+- downstream affected files
+- recommended tests
+- both sides of architecture-violation dependency edges
+- last-touch Git commits for changed source files
+
+This URL rendering belongs to the GitHub Action adapter. The versioned JSON report intentionally keeps repository-relative paths and commit SHAs so the core remains portable to GitLab, Azure DevOps, VS Code, MCP, and other future surfaces.
+
 ## Outputs
 
 The action exposes:
@@ -63,6 +77,6 @@ Warnings remain visible in the report and GitHub Step Summary but do not fail th
 
 ## Requirements
 
-The consuming workflow must check out the repository before running CodeCausality. Use `fetch-depth: 0` so Git comparison data is available reliably.
+The consuming workflow must check out the repository before running CodeCausality. Use `fetch-depth: 0` so Git comparison and history evidence are available reliably.
 
 The action is deterministic and does not require an LLM provider, API key, or token budget.
