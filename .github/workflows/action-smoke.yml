@@ -1,0 +1,33 @@
+name: Action Smoke
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  action-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run local CodeCausality action
+        id: codecausality
+        uses: ./
+        with:
+          base-ref: main
+          report-path: .codecausality/action-smoke.json
+          fail-on-architecture-error: 'false'
+
+      - name: Validate action outputs
+        shell: bash
+        run: |
+          test -f "${{ steps.codecausality.outputs.report-path }}"
+          test -n "${{ steps.codecausality.outputs.impact-score }}"
+          test -n "${{ steps.codecausality.outputs.risk-level }}"
+          echo "Impact score: ${{ steps.codecausality.outputs.impact-score }}"
+          echo "Risk level: ${{ steps.codecausality.outputs.risk-level }}"
