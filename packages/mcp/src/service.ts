@@ -3,6 +3,7 @@ import {
   analyzeChangeSetImpact,
   analyzeImpact,
   analyzeRepository,
+  createContextBundle,
   createImpactReport,
   findArchitectureViolations,
   getGitChangedFiles,
@@ -16,6 +17,10 @@ import {
 export interface ToolOptions {
   rootDir?: string;
   maxItems?: number;
+}
+
+export interface ContextToolOptions extends ToolOptions {
+  maxChars?: number;
 }
 
 export async function scanRepositoryForMcp(options: ToolOptions = {}) {
@@ -90,12 +95,59 @@ export async function analyzeSinceForMcp(
   return analyzeGitChangeSetForMcp(baseRef, options);
 }
 
+export async function createContextBundleForMcp(
+  baseRef: string | undefined,
+  options: ContextToolOptions = {},
+) {
+  const { report } = await buildGitChangeSetEvidence(baseRef, options);
+  return createContextBundle(report, { maxChars: options.maxChars });
+}
+
 async function analyzeGitChangeSetForMcp(
   baseRef: string | undefined,
   options: ToolOptions,
 ) {
-  const rootDir = path.resolve(options.rootDir ?? process.cwd());
   const maxItems = normalizeMaxItems(options.maxItems);
+  const {
+    rootDir,
+    changeSet,
+    ignoredFiles,
+    impact,
+    ownership,
+    history,
+    architectureViolations,
+    recommendedTests,
+    report,
+  } = await buildGitChangeSetEvidence(baseRef, options);
+
+  return {
+    schemaVersion: report.schemaVersion,
+    repositoryRoot: rootDir,
+    scope: baseRef ? { mode: 'ref', baseRef } : { mode: 'working-tree' },
+    changedFiles: limited(changeSet.files, maxItems),
+    ignoredFiles: limited(ignoredFiles, maxItems),
+    impact: {
+      impactScore: impact.impactScore,
+      riskLevel: impact.riskLevel,
+      foundTargets: limited(impact.foundTargets, maxItems),
+      missingTargets: limited(impact.missingTargets, maxItems),
+      affectedFiles: limited(impact.affectedFiles, maxItems),
+      affectedTests: limited(impact.affectedTests, maxItems),
+      affectedModules: limited(impact.affectedModules, maxItems),
+      rankedTargets: limited(impact.rankedTargets, maxItems),
+    },
+    ownership: limited(ownership, maxItems),
+    history: limited(history, maxItems),
+    architectureViolations: limited(architectureViolations, maxItems),
+    recommendedTests: limited(recommendedTests, maxItems),
+  };
+}
+
+async function buildGitChangeSetEvidence(
+  baseRef: string | undefined,
+  options: ToolOptions,
+) {
+  const rootDir = path.resolve(options.rootDir ?? process.cwd());
   const config = await loadCodeCausalityConfig(rootDir);
   const snapshot = await analyzeRepository({
     rootDir,
@@ -131,25 +183,15 @@ async function analyzeGitChangeSetForMcp(
   });
 
   return {
-    schemaVersion: report.schemaVersion,
-    repositoryRoot: rootDir,
-    scope: baseRef ? { mode: 'ref', baseRef } : { mode: 'working-tree' },
-    changedFiles: limited(changeSet.files, maxItems),
-    ignoredFiles: limited(ignoredFiles, maxItems),
-    impact: {
-      impactScore: impact.impactScore,
-      riskLevel: impact.riskLevel,
-      foundTargets: limited(impact.foundTargets, maxItems),
-      missingTargets: limited(impact.missingTargets, maxItems),
-      affectedFiles: limited(impact.affectedFiles, maxItems),
-      affectedTests: limited(impact.affectedTests, maxItems),
-      affectedModules: limited(impact.affectedModules, maxItems),
-      rankedTargets: limited(impact.rankedTargets, maxItems),
-    },
-    ownership: limited(ownership, maxItems),
-    history: limited(history, maxItems),
-    architectureViolations: limited(architectureViolations, maxItems),
-    recommendedTests: limited(recommendedTests, maxItems),
+    rootDir,
+    changeSet,
+    ignoredFiles,
+    impact,
+    ownership,
+    history,
+    architectureViolations,
+    recommendedTests,
+    report,
   };
 }
 
