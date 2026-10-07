@@ -39,7 +39,7 @@
 
 ## Sprint 3 — PR intelligence
 
-- [ ] Add architecture boundary configuration.
+- [x] Add architecture boundary configuration.
 - [ ] Add richer affected-test mapping heuristics.
 - [ ] Add GitHub Action.
 - [ ] Generate PR impact summary.
