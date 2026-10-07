@@ -73,3 +73,15 @@
 - [x] Keep ForgeMCP as the reusable MCP framework boundary.
 - [ ] Add MCP resources for persisted impact reports.
 - [ ] Add host integration examples for VS Code, Claude Code and Cursor.
+
+
+## Sprint 6 — Compact AI context bundles
+
+- [x] Add versioned context-bundle schema.
+- [x] Add deterministic character budget.
+- [x] Prioritize changed files, architecture violations, recommended tests and test evidence.
+- [x] Add truncation metadata and regression tests.
+- [ ] Add CLI context-bundle export.
+- [ ] Add MCP context-bundle tool.
+- [ ] Add optional bounded source snippets.
+- [ ] Integrate the bundle with Copilot Toolkit context workflows.
