@@ -1,11 +1,10 @@
 {
   "name": "codecausality",
   "displayName": "CodeCausality — Change Impact Intelligence",
-  "description": "Trace code-change blast radius, affected tests, architecture violations, ownership, and Git history directly inside VS Code.",
-  "version": "0.1.0",
+  "description": "Understand your repository and see what a code change can affect before you ship it.",
+  "version": "1.0.0",
   "publisher": "aetherexa",
   "license": "SEE LICENSE IN LICENSE",
-  "preview": true,
   "pricing": "Free",
   "repository": {
     "type": "git",
@@ -15,22 +14,28 @@
   "bugs": {
     "url": "https://github.com/Aetherexa/CodeCausality/issues"
   },
+  "galleryBanner": {
+    "color": "#111827",
+    "theme": "dark"
+  },
   "keywords": [
     "change impact",
     "blast radius",
     "dependency graph",
+    "repository intelligence",
     "architecture",
     "code review",
     "affected tests",
     "git",
-    "developer tools",
     "static analysis",
-    "repository intelligence"
+    "codebase understanding"
   ],
   "files": [
     "dist/extension.js",
     "README.md",
     "CHANGELOG.md",
+    "SUPPORT.md",
+    "PRIVACY.md",
     "LICENSE",
     "package.json"
   ],
@@ -45,11 +50,18 @@
   "extensionKind": [
     "workspace"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "CodeCausality reads workspace source files and local Git history to build repository change-impact intelligence."
+    }
+  },
   "main": "./dist/extension.js",
   "activationEvents": [
     "onView:codecausality.impactExplorer",
     "onCommand:codecausality.analyzeCurrentFile",
-    "onCommand:codecausality.analyzeWorkingTree"
+    "onCommand:codecausality.analyzeWorkingTree",
+    "onCommand:codecausality.openGettingStarted"
   ],
   "contributes": {
     "commands": [
@@ -60,6 +72,10 @@
       {
         "command": "codecausality.analyzeWorkingTree",
         "title": "CodeCausality: Analyze Working Tree"
+      },
+      {
+        "command": "codecausality.openGettingStarted",
+        "title": "CodeCausality: Getting Started"
       }
     ],
     "views": {
@@ -76,15 +92,44 @@
         {
           "command": "codecausality.analyzeCurrentFile",
           "when": "view == codecausality.impactExplorer",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "codecausality.analyzeWorkingTree",
           "when": "view == codecausality.impactExplorer",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ]
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "codecausality.gettingStarted",
+        "title": "Understand Change Before You Ship",
+        "description": "Use CodeCausality to inspect repository relationships and understand the likely impact of a code change.",
+        "steps": [
+          {
+            "id": "open-repository",
+            "title": "Open a repository",
+            "description": "Open a JavaScript or TypeScript Git repository. CodeCausality analyzes source relationships locally inside your workspace."
+          },
+          {
+            "id": "current-file",
+            "title": "Inspect one file",
+            "description": "Open a source file, then run [CodeCausality: Analyze Current File](command:codecausality.analyzeCurrentFile) to see downstream impact."
+          },
+          {
+            "id": "working-tree",
+            "title": "Inspect your current changes",
+            "description": "Run [CodeCausality: Analyze Working Tree](command:codecausality.analyzeWorkingTree) to see the combined blast radius of your Git changes."
+          },
+          {
+            "id": "review-evidence",
+            "title": "Follow the evidence",
+            "description": "Use the impact graph, affected files, recommended tests, architecture guardrails, ownership, and history signals to understand the change before you ship it."
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --outfile=dist/extension.js --sourcemap",

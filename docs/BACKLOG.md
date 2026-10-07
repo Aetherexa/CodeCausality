@@ -1,5 +1,24 @@
 # CodeCausality Backlog
 
+## V1.0.0 — Marketplace launch
+
+### Product scope freeze
+
+- [x] V1 positioning: repository and change-impact intelligence.
+- [x] Keep MCP, AI context bundles, and Copilot Toolkit integrations out of V1 Marketplace positioning.
+- [x] Version extension as 1.0.0.
+- [x] Add V1 onboarding walkthrough.
+- [x] Add workspace-trust protection.
+- [x] Add V1 privacy/no-telemetry statement.
+- [x] Add support policy.
+- [x] Rewrite Marketplace README for V1.
+- [x] Add V1 release checklist.
+- [ ] Confirm/create Marketplace publisher `aetherexa`.
+- [ ] Add production PNG icon (>=128x128).
+- [ ] Capture final Marketplace screenshots from the packaged build.
+- [ ] Run clean-profile VSIX release rehearsal.
+- [ ] Publish V1.
+
 ## Sprint 0 — Foundation
 
 - [x] Finalize CodeCausality product boundary.
@@ -46,7 +65,6 @@
 - [x] Publish recommended test surface.
 - [x] Add evidence links for reviewers.
 
-
 ## Sprint 4 — VS Code developer surface
 
 - [x] Add VS Code extension workspace.
@@ -59,29 +77,27 @@
 - [x] Add interactive dependency graph visualization.
 - [x] Add selection/focus controls for large impact graphs.
 - [x] Package the extension for Marketplace distribution.
-- [ ] Verify/create the `aetherexa` Visual Studio Marketplace publisher.
-- [ ] Publish the first Preview release after publisher authentication is configured.
 
+## Future — V2/V3 integration capabilities
 
-## Sprint 5 — MCP adapter
+These capabilities may exist in the repository but are intentionally not part of the V1 Marketplace promise.
 
-- [x] Add thin `@codecausality/mcp` workspace.
-- [x] Use the current MCP TypeScript server SDK v2.
-- [x] Expose repository scan, file impact, working-tree impact and ref impact tools.
-- [x] Default to compact bounded evidence responses.
-- [x] Serve over stdio without LLM/token dependency.
-- [x] Keep ForgeMCP as the reusable MCP framework boundary.
-- [ ] Add MCP resources for persisted impact reports.
-- [ ] Add host integration examples for VS Code, Claude Code and Cursor.
+### V2 candidates
 
+- MCP distribution/integration.
+- AI context bundles.
+- Optional bounded source snippets.
+- MCP resources and host examples.
 
-## Sprint 6 — Compact AI context bundles
+### V3 candidates
 
-- [x] Add versioned context-bundle schema.
-- [x] Add deterministic character budget.
-- [x] Prioritize changed files, architecture violations, recommended tests and test evidence.
-- [x] Add truncation metadata and regression tests.
-- [x] Add CLI context-bundle export.
-- [ ] Add MCP context-bundle tool.
-- [ ] Add optional bounded source snippets.
-- [ ] Integrate the bundle with Copilot Toolkit context workflows.
+- Copilot Toolkit integration.
+- Automated context selection/workflow orchestration.
+- Broader Aetherexa intelligence composition.
+
+## Infrastructure hardening
+
+- [ ] Confirm/create the `aetherexa` Visual Studio Marketplace publisher.
+- [ ] Publish the first V1 release after publisher authentication is configured.
+- [ ] Add MCP resources for persisted impact reports when V2 work resumes.
+- [ ] Add host integration examples for VS Code, Claude Code and Cursor when V2 work resumes.
