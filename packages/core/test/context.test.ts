@@ -11,17 +11,56 @@ import {
 } from '../src/index.js';
 
 describe('repository context', () => {
-  it('loads .codecausality.json with safe defaults', async () => {
+  it('loads .codecausality.json including architecture boundaries', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'codecausality-config-'));
     await writeFile(
       path.join(root, '.codecausality.json'),
-      JSON.stringify({ ignore: ['generated/**'], moduleDepth: 3 }),
+      JSON.stringify({
+        ignore: ['generated/**'],
+        moduleDepth: 3,
+        architecture: {
+          boundaries: [
+            {
+              name: 'ui-no-data',
+              from: ['src/ui/**'],
+              disallow: ['src/data/**'],
+              severity: 'warning',
+            },
+          ],
+        },
+      }),
     );
 
     const config = await loadCodeCausalityConfig(root);
 
     expect(config.ignore).toEqual(['generated/**']);
     expect(config.moduleDepth).toBe(3);
+    expect(config.architecture.boundaries).toEqual([
+      {
+        name: 'ui-no-data',
+        from: ['src/ui/**'],
+        disallow: ['src/data/**'],
+        severity: 'warning',
+      },
+    ]);
+  });
+
+  it('defaults malformed architecture entries away safely', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'codecausality-config-invalid-'));
+    await writeFile(
+      path.join(root, '.codecausality.json'),
+      JSON.stringify({
+        architecture: {
+          boundaries: [
+            { name: '', from: ['src/**'], disallow: ['legacy/**'] },
+            { name: 'missing-target', from: ['src/**'] },
+          ],
+        },
+      }),
+    );
+
+    const config = await loadCodeCausalityConfig(root);
+    expect(config.architecture.boundaries).toEqual([]);
   });
 
   it('uses the last matching CODEOWNERS rule', async () => {
@@ -49,7 +88,7 @@ describe('repository context', () => {
     expect(rules).toEqual([{ pattern: '/src/**', owners: ['@core-team'] }]);
   });
 
-  it('creates a stable versioned impact report', () => {
+  it('creates a stable versioned impact report with architecture evidence', () => {
     const report = createImpactReport({
       repositoryRoot: '/repo',
       changeSet: { mode: 'ref', baseRef: 'main', files: ['src/a.ts'] },
@@ -80,9 +119,20 @@ describe('repository context', () => {
         impactScore: 7,
         riskLevel: 'LOW',
       },
+      architectureViolations: [
+        {
+          ruleName: 'ui-no-data',
+          severity: 'error',
+          from: 'src/a.ts',
+          to: 'src/data/db.ts',
+          specifier: './data/db.js',
+          kind: 'static',
+        },
+      ],
     });
 
     expect(report.schemaVersion).toBe('1.0');
     expect(report.impact.affectedModules[0]?.module).toBe('src');
+    expect(report.architectureViolations[0]?.ruleName).toBe('ui-no-data');
   });
 });
