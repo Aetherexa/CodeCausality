@@ -15,31 +15,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: pnpm install --no-frozen-lockfile
 
       - name: Validate repository
-        run: npm run quality
+        run: pnpm check
 
       - name: Build VSIX
-        run: npm run package:vscode
+        run: pnpm package:vsix
 
       - name: Inspect VSIX
-        shell: bash
-        run: |
-          VSIX="$(find packages/vscode -maxdepth 1 -name 'codecausality-*.vsix' -print -quit)"
-          test -n "$VSIX"
-          echo "VSIX=$VSIX"
-          ls -lh "$VSIX"
+        run: ls -lh artifacts/codecausality-1.0.0.vsix
 
       - name: Upload VSIX
         uses: actions/upload-artifact@v4
         with:
           name: codecausality-vscode
-          path: packages/vscode/codecausality-*.vsix
+          path: artifacts/codecausality-1.0.0.vsix
           if-no-files-found: error
           retention-days: 30

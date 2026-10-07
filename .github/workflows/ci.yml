@@ -2,32 +2,61 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["main", "feat/**", "fix/**", "release/**", "refactor/**"]
   pull_request:
-    branches: [main]
+    branches: ["main"]
 
 permissions:
   contents: read
 
 jobs:
   quality:
+    name: Quality Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
-      - run: npm run quality
-      - name: Package VS Code extension
-        run: npm run package:vscode
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Coverage
+        run: pnpm test:coverage
+
+      - name: Build
+        run: pnpm build
+
+      - name: Package V1 VSIX
+        run: pnpm package:vsix
+
       - name: Verify VSIX
         shell: bash
-        run: |
-          test -n "$(find packages/vscode -maxdepth 1 -name 'codecausality-*.vsix' -print -quit)"
+        run: test -f artifacts/codecausality-1.0.0.vsix
+
       - name: Upload VSIX
         uses: actions/upload-artifact@v4
         with:
           name: codecausality-vsix
-          path: packages/vscode/codecausality-*.vsix
+          path: artifacts/codecausality-1.0.0.vsix
           retention-days: 7

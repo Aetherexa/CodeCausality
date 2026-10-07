@@ -1,7 +1,12 @@
 node_modules/
 dist/
 coverage/
+.vscode-test/
 *.log
-.DS_Store
-.codecausality/
 *.vsix
+.DS_Store
+.env
+.env.*
+!.env.example
+.codecausality/
+artifacts/

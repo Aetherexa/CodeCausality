@@ -30,15 +30,6 @@
     "static analysis",
     "codebase understanding"
   ],
-  "files": [
-    "dist/extension.js",
-    "README.md",
-    "CHANGELOG.md",
-    "SUPPORT.md",
-    "PRIVACY.md",
-    "LICENSE",
-    "package.json"
-  ],
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -56,7 +47,7 @@
       "description": "CodeCausality reads workspace source files and local Git history to build repository change-impact intelligence."
     }
   },
-  "main": "./dist/extension.js",
+  "main": "./dist/extension.cjs",
   "activationEvents": [
     "onView:codecausality.impactExplorer",
     "onCommand:codecausality.analyzeCurrentFile",
@@ -132,17 +123,20 @@
     ]
   },
   "scripts": {
-    "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --outfile=dist/extension.js --sourcemap",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "vscode:prepublish": "npm run build",
-    "package:vsix": "npx --yes @vscode/vsce@4.0.0 package --no-dependencies",
-    "package:vsix:pnpm": "pnpm run build && pnpm dlx @vscode/vsce@4.0.0 package --no-dependencies"
+    "build": "node ./build.mjs",
+    "typecheck": "tsc -b --pretty false",
+    "vscode:prepublish": "pnpm run build",
+    "prepare:vsix": "node -e \"require('fs').mkdirSync('../../artifacts',{recursive:true})\"",
+    "package:vsix": "pnpm run prepare:vsix && vsce package --no-dependencies --out ../../artifacts/codecausality-1.0.0.vsix",
+    "publish:marketplace": "vsce publish --no-dependencies"
   },
   "devDependencies": {
-    "@codecausality/core": "0.1.0",
+    "@codecausality/core": "workspace:*",
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.95.0",
-    "esbuild": "^0.24.0",
-    "typescript": "^5.7.0"
-  }
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.25.9",
+    "typescript": "^5.9.3"
+  },
+  "type": "module"
 }
