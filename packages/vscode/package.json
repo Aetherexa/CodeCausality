@@ -138,5 +138,6 @@
     "esbuild": "^0.25.9",
     "typescript": "^5.9.3"
   },
-  "type": "module"
+  "type": "module",
+  "icon": "media/icon.png"
 }
