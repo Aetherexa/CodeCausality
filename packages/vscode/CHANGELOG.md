@@ -2,7 +2,7 @@
 
 All notable changes to the CodeCausality VS Code extension are documented here.
 
-## 1.0.4 — Modernized dashboard UX
+## 1.0.5 — Modernized dashboard UX
 
 - Refreshed the editor-tab UI with a cleaner VS Code-native dashboard hierarchy.
 - Added risk-aware styling, metric cards, status pills, and a segmented analysis switcher.
