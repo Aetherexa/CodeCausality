@@ -52,10 +52,18 @@ class ImpactExplorerPanel {
   static readonly viewType = 'codecausality.impactPanel';
 
   private panel?: vscode.WebviewPanel;
+  private lastTextEditor?: vscode.TextEditor;
   private model?: ExplorerModel;
   private status = 'Open a source file or analyze the current working tree.';
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.lastTextEditor = vscode.window.activeTextEditor;
+    context.subscriptions.push(
+      vscode.window.onDidChangeActiveTextEditor((editor) => {
+        if (editor) this.lastTextEditor = editor;
+      }),
+    );
+  }
 
   private ensurePanel(): vscode.WebviewPanel {
     if (this.panel) return this.panel;
@@ -99,7 +107,7 @@ class ImpactExplorerPanel {
 
   async analyzeCurrentFile(): Promise<void> {
     const workspace = this.workspaceRoot();
-    const editor = vscode.window.activeTextEditor;
+    const editor = vscode.window.activeTextEditor ?? this.lastTextEditor;
 
     if (!workspace || !editor) {
       this.setStatus('Open a source file inside a workspace before running current-file analysis.');
