@@ -207,6 +207,22 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
     return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   }
 
+  async revealResults(): Promise<void> {
+    if (this.view) {
+      this.view.show(false);
+      this.render();
+      return;
+    }
+
+    try {
+      await vscode.commands.executeCommand(`${ImpactExplorerProvider.viewType}.focus`);
+    } catch {
+      await vscode.commands.executeCommand('workbench.view.extension.codecausality');
+    }
+
+    this.render();
+  }
+
   private async withProgress(label: string, operation: () => Promise<void>): Promise<void> {
     try {
       await vscode.window.withProgress(
@@ -239,12 +255,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ImpactExplorerProvider.viewType, provider),
-    vscode.commands.registerCommand('codecausality.analyzeCurrentFile', () =>
-      provider.analyzeCurrentFile(),
-    ),
-    vscode.commands.registerCommand('codecausality.analyzeWorkingTree', () =>
-      provider.analyzeWorkingTree(),
-    ),
+    vscode.commands.registerCommand('codecausality.analyzeCurrentFile', async () => {
+      await provider.analyzeCurrentFile();
+      await provider.revealResults();
+    }),
+    vscode.commands.registerCommand('codecausality.analyzeWorkingTree', async () => {
+      await provider.analyzeWorkingTree();
+      await provider.revealResults();
+    }),
     vscode.commands.registerCommand('codecausality.openGettingStarted', () =>
       openGettingStarted(),
     ),

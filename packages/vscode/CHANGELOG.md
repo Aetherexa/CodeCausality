@@ -2,6 +2,13 @@
 
 All notable changes to the CodeCausality VS Code extension are documented here.
 
+## 1.0.1 — Launch candidate fixes
+
+- Fixed Command Palette analysis commands so they automatically reveal the CodeCausality result surface.
+- Added a dedicated CodeCausality Activity Bar container and icon.
+- Kept the Marketplace PNG icon wired into the packaged VSIX.
+- Improved local launch validation after the 1.0.0 internal release candidate.
+
 ## 1.0.0 — First public release
 
 ### Repository insight
