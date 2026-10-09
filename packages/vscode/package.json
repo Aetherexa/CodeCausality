@@ -2,7 +2,7 @@
   "name": "codecausality",
   "displayName": "CodeCausality — Change Impact Intelligence",
   "description": "Understand your repository and see what a code change can affect before you ship it.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "aetherexa",
   "license": "SEE LICENSE IN LICENSE",
   "pricing": "Free",
@@ -49,7 +49,6 @@
   },
   "main": "./dist/extension.cjs",
   "activationEvents": [
-    "onView:codecausality.impactExplorer",
     "onCommand:codecausality.analyzeCurrentFile",
     "onCommand:codecausality.analyzeWorkingTree",
     "onCommand:codecausality.openGettingStarted"
@@ -69,29 +68,6 @@
         "title": "CodeCausality: Getting Started"
       }
     ],
-    "views": {
-      "codecausality": [
-        {
-          "type": "webview",
-          "id": "codecausality.impactExplorer",
-          "name": "Impact Explorer"
-        }
-      ]
-    },
-    "menus": {
-      "view/title": [
-        {
-          "command": "codecausality.analyzeCurrentFile",
-          "when": "view == codecausality.impactExplorer",
-          "group": "navigation@1"
-        },
-        {
-          "command": "codecausality.analyzeWorkingTree",
-          "when": "view == codecausality.impactExplorer",
-          "group": "navigation@2"
-        }
-      ]
-    },
     "walkthroughs": [
       {
         "id": "codecausality.gettingStarted",
@@ -120,23 +96,14 @@
           }
         ]
       }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "codecausality",
-          "title": "CodeCausality",
-          "icon": "media/activity-icon.svg"
-        }
-      ]
-    }
+    ]
   },
   "scripts": {
     "build": "node ./build.mjs",
     "typecheck": "tsc -b --pretty false",
     "vscode:prepublish": "pnpm run build",
     "prepare:vsix": "node -e \"require('fs').mkdirSync('../../artifacts',{recursive:true})\"",
-    "package:vsix": "pnpm run prepare:vsix && vsce package --no-dependencies --out ../../artifacts/codecausality-1.0.1.vsix",
+    "package:vsix": "pnpm run prepare:vsix && vsce package --no-dependencies --out ../../artifacts/codecausality-1.0.2.vsix",
     "publish:marketplace": "vsce publish --no-dependencies"
   },
   "devDependencies": {

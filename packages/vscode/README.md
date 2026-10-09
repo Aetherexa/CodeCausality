@@ -4,7 +4,7 @@
 
 CodeCausality helps you understand how a repository is connected and what a code change could affect **before you ship it**.
 
-It runs locally inside VS Code and turns source relationships, Git changes, tests, architecture rules, ownership, and history into practical change-impact evidence.
+It runs locally inside VS Code and turns source relationships, Git changes, tests, architecture rules, ownership, and history into a full-width **CodeCausality Impact** editor tab.
 
 ## Why CodeCausality?
 
@@ -76,9 +76,9 @@ When available, CodeCausality surfaces:
 
 1. Install CodeCausality.
 2. Open a JavaScript or TypeScript Git repository.
-3. Open **Explorer → CodeCausality Impact**.
-4. Choose **Current file** or **Working tree**.
-5. Follow the evidence before making or shipping the change.
+3. Open a source file or make a Git working-tree change.
+4. Run **CodeCausality: Analyze Current File** or **CodeCausality: Analyze Working Tree**.
+5. CodeCausality opens a reusable **CodeCausality Impact** editor tab with the full analysis.
 
 You can also run:
 
@@ -146,7 +146,7 @@ The graph model is designed to support more language analyzers in later releases
 For manual testing before Marketplace publication:
 
 ```bash
-code --install-extension codecausality-1.0.1.vsix
+code --install-extension codecausality-1.0.2.vsix
 ```
 
 Or use **Extensions → … → Install from VSIX…** inside VS Code.
