@@ -294,6 +294,9 @@ async function openGettingStarted(): Promise<void> {
 function renderHtml(model: ExplorerModel | undefined, status: string): string {
   const nonce = createNonce();
   const body = model ? renderModel(model) : renderWelcome();
+  const currentMode = model?.title.startsWith('Current file:') ?? false;
+  const workingMode = model?.title === 'Working tree';
+  const statusTone = status.startsWith('Analysis failed') ? 'error' : status.includes('complete') || status.startsWith('Analyzed') ? 'success' : 'neutral';
 
   return `<!doctype html>
 <html>
@@ -418,16 +421,211 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     }
     .graph-node.filtered,
     .graph-edge.filtered { display: none; }
+    /* Modern V1 dashboard */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 12% -10%, color-mix(in srgb, var(--vscode-focusBorder) 10%, transparent), transparent 34%),
+        radial-gradient(circle at 92% 4%, color-mix(in srgb, var(--vscode-textLink-foreground) 7%, transparent), transparent 28%);
+      opacity: .8;
+    }
+    .app { position: relative; max-width: 1500px; }
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+      padding: 4px 0 14px;
+      border-bottom: 1px solid var(--vscode-panel-border);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 34px; height: 34px; flex: 0 0 auto; border-radius: 9px;
+      display: grid; place-items: center;
+      color: var(--vscode-button-foreground);
+      background: linear-gradient(145deg, var(--vscode-button-background), var(--vscode-textLink-foreground));
+      box-shadow: 0 8px 28px color-mix(in srgb, var(--vscode-focusBorder) 20%, transparent);
+      font-weight: 800; font-size: 13px; letter-spacing: -.5px;
+    }
+    .brand-copy { min-width: 0; }
+    .brand-title { font-weight: 700; font-size: 15px; letter-spacing: -.2px; }
+    .brand-subtitle { margin-top: 2px; color: var(--vscode-descriptionForeground); font-size: 11px; }
+    .toolbar {
+      margin: 0;
+      padding: 3px;
+      border-radius: 9px;
+      background: var(--vscode-editorWidget-background);
+      border: 1px solid var(--vscode-panel-border);
+    }
+    .toolbar button {
+      border-radius: 6px;
+      padding: 7px 12px;
+      color: var(--vscode-descriptionForeground);
+      background: transparent;
+      font-weight: 600;
+    }
+    .toolbar button:hover { color: var(--vscode-foreground); background: var(--vscode-toolbar-hoverBackground); }
+    .toolbar button.active {
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0 0 14px;
+      padding: 6px 10px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 999px;
+      background: var(--vscode-editorWidget-background);
+      font-size: 11px;
+    }
+    .status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--vscode-descriptionForeground); }
+    .status.success::before { background: var(--vscode-testing-iconPassed, #3fb950); }
+    .status.error::before { background: var(--vscode-testing-iconFailed, #f85149); }
+    .hero {
+      border-radius: 14px;
+      padding: 20px;
+      margin: 0 0 18px;
+      background: linear-gradient(145deg,
+        color-mix(in srgb, var(--vscode-editorWidget-background) 92%, var(--vscode-focusBorder)),
+        var(--vscode-editorWidget-background));
+      box-shadow: 0 12px 36px rgba(0,0,0,.12);
+    }
+    .hero h2 { font-size: 16px; line-height: 1.45; word-break: break-word; }
+    .risk {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      margin: 12px 0 6px;
+      padding: 7px 10px;
+      border-radius: 9px;
+      border: 1px solid var(--vscode-panel-border);
+      background: color-mix(in srgb, var(--vscode-editor-background) 75%, transparent);
+      letter-spacing: -.4px;
+    }
+    .risk-low { color: var(--vscode-testing-iconPassed, #3fb950); }
+    .risk-medium { color: var(--vscode-editorWarning-foreground, #d29922); }
+    .risk-high, .risk-critical { color: var(--vscode-errorForeground, #f85149); }
+    .analysis-note { max-width: 900px; }
+    .metrics { gap: 10px; margin-top: 16px; }
+    .metric {
+      min-height: 72px;
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: color-mix(in srgb, var(--vscode-editor-background) 74%, var(--vscode-editorWidget-background));
+      transition: transform .15s ease, border-color .15s ease;
+    }
+    .metric:hover { transform: translateY(-1px); border-color: var(--vscode-focusBorder); }
+    .metric strong { font-size: 22px; line-height: 1.1; margin-bottom: 8px; letter-spacing: -.6px; }
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 24px 0 10px;
+      font-size: 14px;
+      letter-spacing: .1px;
+      text-transform: none;
+    }
+    h3::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      border-radius: 3px;
+      background: var(--vscode-focusBorder);
+    }
+    ul {
+      display: grid;
+      gap: 7px;
+    }
+    li {
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      background: color-mix(in srgb, var(--vscode-editorWidget-background) 65%, transparent);
+    }
+    .file { font-weight: 550; text-decoration: none; }
+    .file:hover { text-decoration: underline; }
+    .meta { font-size: 11px; line-height: 1.4; }
+    .graph-controls {
+      grid-template-columns: minmax(220px, 1fr) auto auto auto auto auto;
+      align-items: center;
+      margin: 8px 0;
+    }
+    .graph-controls input, .graph-controls select {
+      height: 34px;
+      border-radius: 7px;
+      padding: 6px 9px;
+      outline: none;
+    }
+    .graph-controls input:focus, .graph-controls select:focus {
+      border-color: var(--vscode-focusBorder);
+    }
+    .graph-controls button { height: 34px; border-radius: 7px; min-width: 34px; }
+    .graph-legend { margin: 10px 0; gap: 8px; }
+    .legend-item {
+      padding: 4px 8px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 999px;
+      background: var(--vscode-editorWidget-background);
+    }
+    .graph-scroll {
+      min-height: 360px;
+      max-height: 640px;
+      border-radius: 12px;
+      background:
+        linear-gradient(color-mix(in srgb, var(--vscode-editor-background) 96%, white), color-mix(in srgb, var(--vscode-editor-background) 96%, black)),
+        repeating-linear-gradient(0deg, transparent, transparent 23px, color-mix(in srgb, var(--vscode-panel-border) 32%, transparent) 24px),
+        repeating-linear-gradient(90deg, transparent, transparent 23px, color-mix(in srgb, var(--vscode-panel-border) 32%, transparent) 24px);
+      cursor: grab;
+    }
+    .graph-scroll.is-panning { cursor: grabbing; user-select: none; }
+    .graph-node rect { rx: 8; }
+    .graph-node.changed rect {
+      fill: color-mix(in srgb, var(--vscode-focusBorder) 9%, var(--vscode-editorWidget-background));
+    }
+    .graph-node.test rect {
+      fill: color-mix(in srgb, var(--vscode-testing-iconPassed, #3fb950) 6%, var(--vscode-editorWidget-background));
+    }
+    .welcome {
+      max-width: 720px;
+      margin: 42px auto 0;
+      padding: 26px;
+      border-radius: 14px;
+      background: var(--vscode-editorWidget-background);
+      box-shadow: 0 12px 36px rgba(0,0,0,.12);
+    }
+    .welcome h2 { font-size: 22px; letter-spacing: -.5px; }
+    @media (max-width: 760px) {
+      body { padding: 16px; }
+      .app-header { align-items: flex-start; flex-direction: column; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .graph-controls { grid-template-columns: 1fr 1fr 1fr; }
+      .graph-controls input { grid-column: 1 / -1; }
+    }
   </style>
 </head>
 <body>
   <main class="app">
-  <div class="toolbar">
-    <button data-command="current">Current file</button>
-    <button data-command="workingTree">Working tree</button>
-  </div>
-  <div class="status">${escapeHtml(status)}</div>
-  ${body}
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark">CC</div>
+        <div class="brand-copy">
+          <div class="brand-title">CodeCausality</div>
+          <div class="brand-subtitle">Change Impact Intelligence · local-first</div>
+        </div>
+      </div>
+      <div class="toolbar" role="group" aria-label="Analysis mode">
+        <button class="${currentMode ? 'active' : ''}" aria-pressed="${currentMode}" data-command="current">Current file</button>
+        <button class="${workingMode ? 'active' : ''}" aria-pressed="${workingMode}" data-command="workingTree">Working tree</button>
+      </div>
+    </header>
+    <div class="status ${statusTone}">${escapeHtml(status)}</div>
+    ${body}
   </main>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
@@ -455,6 +653,22 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     const graphSearch = document.querySelector('[data-graph-search]');
     const graphKind = document.querySelector('[data-graph-kind]');
     const graphReset = document.querySelector('[data-graph-reset]');
+    const graphZoomIn = document.querySelector('[data-graph-zoom-in]');
+    const graphZoomOut = document.querySelector('[data-graph-zoom-out]');
+    const graphFit = document.querySelector('[data-graph-fit]');
+    const graphViewport = document.querySelector('[data-graph-viewport]');
+    const graphSvg = document.querySelector('[data-graph-svg]');
+    let graphScale = 1;
+
+    const setGraphScale = (nextScale) => {
+      if (!graphSvg) return;
+      graphScale = Math.min(1.75, Math.max(0.5, nextScale));
+      const baseWidth = Number(graphSvg.getAttribute('data-base-width') ?? graphSvg.getAttribute('width') ?? 0);
+      const baseHeight = Number(graphSvg.getAttribute('data-base-height') ?? graphSvg.getAttribute('height') ?? 0);
+      if (!baseWidth || !baseHeight) return;
+      graphSvg.setAttribute('width', String(Math.round(baseWidth * graphScale)));
+      graphSvg.setAttribute('height', String(Math.round(baseHeight * graphScale)));
+    };
 
     const applyGraphFilters = () => {
       const query = (graphSearch?.value ?? '').trim().toLowerCase();
@@ -484,7 +698,49 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
       if (graphSearch) graphSearch.value = '';
       if (graphKind) graphKind.value = 'all';
       applyGraphFilters();
+      setGraphScale(1);
+      if (graphViewport) {
+        graphViewport.scrollLeft = 0;
+        graphViewport.scrollTop = 0;
+      }
     });
+    graphZoomIn?.addEventListener('click', () => setGraphScale(graphScale + 0.15));
+    graphZoomOut?.addEventListener('click', () => setGraphScale(graphScale - 0.15));
+    graphFit?.addEventListener('click', () => {
+      if (!graphSvg || !graphViewport) return;
+      const baseWidth = Number(graphSvg.getAttribute('data-base-width') ?? 0);
+      if (!baseWidth) return;
+      const available = Math.max(320, graphViewport.clientWidth - 24);
+      setGraphScale(Math.min(1, available / baseWidth));
+      graphViewport.scrollLeft = 0;
+      graphViewport.scrollTop = 0;
+    });
+
+    if (graphViewport) {
+      let panning = false;
+      let startX = 0;
+      let startY = 0;
+      let startLeft = 0;
+      let startTop = 0;
+      graphViewport.addEventListener('mousedown', (event) => {
+        if (event.target.closest?.('.graph-node')) return;
+        panning = true;
+        startX = event.clientX;
+        startY = event.clientY;
+        startLeft = graphViewport.scrollLeft;
+        startTop = graphViewport.scrollTop;
+        graphViewport.classList.add('is-panning');
+      });
+      window.addEventListener('mousemove', (event) => {
+        if (!panning) return;
+        graphViewport.scrollLeft = startLeft - (event.clientX - startX);
+        graphViewport.scrollTop = startTop - (event.clientY - startY);
+      });
+      window.addEventListener('mouseup', () => {
+        panning = false;
+        graphViewport.classList.remove('is-panning');
+      });
+    }
   </script>
 </body>
 </html>`;
@@ -503,7 +759,7 @@ function renderModel(model: ExplorerModel): string {
   return `
     <section class="hero">
       <h2>${escapeHtml(model.title)}</h2>
-      <div class="risk">${escapeHtml(impact.riskLevel)} ${impact.impactScore}/100</div>
+      <div class="risk risk-${escapeHtml(impact.riskLevel.toLowerCase())}">${escapeHtml(impact.riskLevel)} <span>${impact.impactScore}/100</span></div>
       <div class="analysis-note">${escapeHtml(analysisNote)}</div>
       <div class="metrics">
         <div class="metric"><strong>${impact.foundTargets.length}</strong>${primaryMetricLabel}</div>
@@ -514,7 +770,7 @@ function renderModel(model: ExplorerModel): string {
     </section>
 
     <h3>Impact graph</h3>
-    ${renderImpactGraph(model.graph)}
+    ${renderImpactGraph(model.graph, isCurrentFile ? 'Target' : 'Changed')}
 
     <h3>Affected files</h3>
     <ul>
@@ -679,7 +935,7 @@ function buildImpactGraph(
   };
 }
 
-function renderImpactGraph(graph: ImpactGraph): string {
+function renderImpactGraph(graph: ImpactGraph, focusLabel = 'Changed'): string {
   if (graph.nodes.length === 0) {
     return '<div class="empty">No impact graph available for this analysis.</div>';
   }
@@ -738,19 +994,22 @@ function renderImpactGraph(graph: ImpactGraph): string {
       <input type="search" data-graph-search placeholder="Filter graph by path" aria-label="Filter graph by path" />
       <select data-graph-kind aria-label="Filter graph by node type">
         <option value="all">All nodes</option>
-        <option value="changed">Changed</option>
+        <option value="changed">${escapeHtml(focusLabel)}</option>
         <option value="affected">Affected</option>
         <option value="test">Tests</option>
       </select>
+      <button type="button" data-graph-zoom-out title="Zoom out" aria-label="Zoom out">−</button>
+      <button type="button" data-graph-zoom-in title="Zoom in" aria-label="Zoom in">+</button>
+      <button type="button" data-graph-fit title="Fit graph to width">Fit</button>
       <button type="button" data-graph-reset>Reset</button>
     </div>
     <div class="graph-legend">
-      <span class="legend-item">Changed = solid focus border</span>
+      <span class="legend-item">${escapeHtml(focusLabel)} = focus border</span>
       <span class="legend-item">Test = dashed border</span>
       <span class="legend-item">Arrows = impact propagation</span>
     </div>
-    <div class="graph-scroll">
-      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="CodeCausality impact graph">
+    <div class="graph-scroll" data-graph-viewport>
+      <svg data-graph-svg data-base-width="${width}" data-base-height="${height}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="CodeCausality impact graph">
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
             <path d="M0,0 L8,4 L0,8 z" fill="var(--vscode-descriptionForeground)" />
