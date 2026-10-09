@@ -98,6 +98,7 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
     }
 
     await this.runAnalysis([relative], `Current file: ${relative}`);
+    await this.revealResults();
   }
 
   async analyzeWorkingTree(): Promise<void> {
@@ -131,6 +132,8 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
           : `Analyzed ${targets.length} changed source file(s).`;
       this.render();
     });
+
+    await this.revealResults();
   }
 
   private async runAnalysis(targets: string[], label: string): Promise<void> {
@@ -207,6 +210,16 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
     return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   }
 
+  async revealResults(): Promise<void> {
+    await vscode.commands.executeCommand('workbench.view.extension.codecausality');
+    try {
+      await vscode.commands.executeCommand(`${ImpactExplorerProvider.viewType}.focus`);
+    } catch {
+      // The container command already reveals the result surface.
+    }
+    this.render();
+  }
+
   private async withProgress(label: string, operation: () => Promise<void>): Promise<void> {
     try {
       await vscode.window.withProgress(
@@ -239,12 +252,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ImpactExplorerProvider.viewType, provider),
-    vscode.commands.registerCommand('codecausality.analyzeCurrentFile', () =>
-      provider.analyzeCurrentFile(),
-    ),
-    vscode.commands.registerCommand('codecausality.analyzeWorkingTree', () =>
-      provider.analyzeWorkingTree(),
-    ),
+    vscode.commands.registerCommand('codecausality.analyzeCurrentFile', async () => {
+      await provider.analyzeCurrentFile();
+      await provider.revealResults();
+    }),
+    vscode.commands.registerCommand('codecausality.analyzeWorkingTree', async () => {
+      await provider.analyzeWorkingTree();
+      await provider.revealResults();
+    }),
     vscode.commands.registerCommand('codecausality.openGettingStarted', () =>
       openGettingStarted(),
     ),
