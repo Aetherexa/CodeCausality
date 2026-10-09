@@ -103,7 +103,7 @@
     "typecheck": "tsc -b --pretty false",
     "vscode:prepublish": "pnpm run build",
     "prepare:vsix": "node -e \"require('fs').mkdirSync('../../artifacts',{recursive:true})\"",
-    "package:vsix": "pnpm run verify:icon && pnpm run prepare:vsix && vsce package --no-dependencies --out ../../artifacts/codecausality-1.0.5.vsix",
+    "package:vsix": "pnpm run verify:icon && pnpm run prepare:vsix && vsce package --no-dependencies --out ../../artifacts/codecausality.vsix",
     "publish:marketplace": "vsce publish --no-dependencies",
     "verify:icon": "node ../../scripts/verify-marketplace-icon.mjs"
   },
