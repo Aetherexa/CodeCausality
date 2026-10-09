@@ -31,10 +31,10 @@ These belong to V2/V3 positioning.
 
 ## Repository readiness
 
-- [x] Extension version set to `1.0.3`.
+- [x] Extension version set to `1.0.4`.
 - [x] V1 Marketplace description and keywords.
 - [x] V1-only Marketplace README.
-- [x] 1.0.3 changelog.
+- [x] 1.0.4 changelog.
 - [x] LICENSE packaged.
 - [x] SUPPORT packaged.
 - [x] PRIVACY packaged.
@@ -98,7 +98,7 @@ For automated publishing, prefer Microsoft Entra ID based automation rather than
 
 1. Merge the V1 release PR.
 2. Run the **VS Code Package** workflow manually.
-3. Download the generated `codecausality-1.0.3.vsix`.
+3. Download the generated `codecausality-1.0.4.vsix`.
 4. Install it into a clean VS Code profile.
 5. Open a public/sample JavaScript or TypeScript repository.
 6. Complete the Getting Started walkthrough.
