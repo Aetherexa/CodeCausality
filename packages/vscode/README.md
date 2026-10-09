@@ -146,7 +146,7 @@ The graph model is designed to support more language analyzers in later releases
 For manual testing before Marketplace publication:
 
 ```bash
-code --install-extension codecausality-1.0.2.vsix
+code --install-extension codecausality-1.0.3.vsix
 ```
 
 Or use **Extensions → … → Install from VSIX…** inside VS Code.

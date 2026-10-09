@@ -336,6 +336,11 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     }
     .hero h2 { margin: 0 0 4px; font-size: 15px; }
     .risk { font-size: 24px; font-weight: 700; margin: 8px 0; }
+    .analysis-note {
+      margin: 2px 0 12px;
+      color: var(--vscode-descriptionForeground);
+      line-height: 1.45;
+    }
     .metrics {
       display: grid;
       grid-template-columns: repeat(4, minmax(120px, 1fr));
@@ -489,13 +494,19 @@ function renderModel(model: ExplorerModel): string {
   const { impact } = model;
   const impactedFiles = impact.affectedFiles.slice(0, 30);
   const ownerMap = new Map(model.ownership.map((item) => [item.file, item.owners]));
+  const isCurrentFile = model.title.startsWith('Current file:');
+  const primaryMetricLabel = isCurrentFile ? 'target' : 'changed';
+  const analysisNote = isCurrentFile
+    ? 'Hypothetical impact analysis — this file is treated as the change target; it does not need to be modified on disk.'
+    : 'Working-tree analysis — changed source files are read from your current Git working tree.';
 
   return `
     <section class="hero">
       <h2>${escapeHtml(model.title)}</h2>
       <div class="risk">${escapeHtml(impact.riskLevel)} ${impact.impactScore}/100</div>
+      <div class="analysis-note">${escapeHtml(analysisNote)}</div>
       <div class="metrics">
-        <div class="metric"><strong>${impact.foundTargets.length}</strong>changed</div>
+        <div class="metric"><strong>${impact.foundTargets.length}</strong>${primaryMetricLabel}</div>
         <div class="metric"><strong>${impact.affectedFiles.length}</strong>affected</div>
         <div class="metric"><strong>${impact.affectedModules.length}</strong>modules</div>
         <div class="metric"><strong>${model.recommendedTests.length}</strong>tests</div>
