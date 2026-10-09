@@ -34,13 +34,13 @@ pnpm package:vsix
 Output:
 
 ```text
-artifacts/codecausality-1.0.4.vsix
+artifacts/codecausality-1.0.5.vsix
 ```
 
 Install locally:
 
 ```powershell
-code --install-extension .\artifacts\codecausality-1.0.4.vsix
+code --install-extension .\artifacts\codecausality-1.0.5.vsix
 ```
 
 ## Why this layout
