@@ -1,0 +1,88 @@
+name: Release VS Code Extension
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: codecausality-marketplace-release
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.17.1"
+
+jobs:
+  release:
+    name: Publish Marketplace Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run repository quality gate
+        run: pnpm check
+
+      - name: Package VSIX
+        run: pnpm package:vsix
+
+      - name: Validate tag and prepare release artifact
+        id: meta
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./packages/vscode/package.json').version")
+          TAG="v$VERSION"
+          if [[ "$GITHUB_REF_NAME" != "$TAG" ]]; then
+            echo "::error::Release tag $GITHUB_REF_NAME does not match package version $VERSION (expected $TAG)."
+            exit 1
+          fi
+          ARTIFACT="artifacts/codecausality-$VERSION.vsix"
+          cp artifacts/codecausality.vsix "$ARTIFACT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to Visual Studio Marketplace
+        run: >-
+          pnpm --filter codecausality exec vsce publish
+          --packagePath "../../${{ steps.meta.outputs.artifact }}"
+          --oidc
+          --skip-duplicate
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          ARTIFACT="${{ steps.meta.outputs.artifact }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ARTIFACT" --clobber
+          else
+            gh release create "$TAG" "$ARTIFACT" \
+              --title "CodeCausality $TAG" \
+              --generate-notes
+          fi
