@@ -98,7 +98,6 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
     }
 
     await this.runAnalysis([relative], `Current file: ${relative}`);
-    await this.revealResults();
   }
 
   async analyzeWorkingTree(): Promise<void> {
@@ -132,8 +131,6 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
           : `Analyzed ${targets.length} changed source file(s).`;
       this.render();
     });
-
-    await this.revealResults();
   }
 
   private async runAnalysis(targets: string[], label: string): Promise<void> {
