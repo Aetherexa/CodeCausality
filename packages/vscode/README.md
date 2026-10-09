@@ -23,6 +23,10 @@ CodeCausality brings those signals together inside VS Code.
 
 ## V1 highlights
 
+### Modern dashboard experience
+
+CodeCausality opens a full-width editor dashboard with risk-aware metric cards, interactive graph controls, responsive evidence cards, and VS Code-native theming.
+
 ### Analyze the current file
 
 Open a source file and run:
@@ -146,7 +150,7 @@ The graph model is designed to support more language analyzers in later releases
 For manual testing before Marketplace publication:
 
 ```bash
-code --install-extension codecausality-1.0.3.vsix
+code --install-extension codecausality-1.0.4.vsix
 ```
 
 Or use **Extensions → … → Install from VSIX…** inside VS Code.
