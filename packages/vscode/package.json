@@ -70,11 +70,11 @@
       }
     ],
     "views": {
-      "explorer": [
+      "codecausality": [
         {
           "type": "webview",
           "id": "codecausality.impactExplorer",
-          "name": "CodeCausality Impact"
+          "name": "Impact Explorer"
         }
       ]
     },
@@ -120,7 +120,16 @@
           }
         ]
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codecausality",
+          "title": "CodeCausality",
+          "icon": "media/activity-icon.svg"
+        }
+      ]
+    }
   },
   "scripts": {
     "build": "node ./build.mjs",
