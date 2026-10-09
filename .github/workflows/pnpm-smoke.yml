@@ -50,7 +50,7 @@ jobs:
       - name: Verify VSIX
         shell: pwsh
         run: |
-          if (-not (Test-Path "artifacts/codecausality-1.0.1.vsix")) {
+          if (-not (Test-Path "artifacts/codecausality-1.0.2.vsix")) {
             throw "VSIX was not generated"
           }
-          Write-Host "Generated artifacts/codecausality-1.0.1.vsix"
+          Write-Host "Generated artifacts/codecausality-1.0.2.vsix"
