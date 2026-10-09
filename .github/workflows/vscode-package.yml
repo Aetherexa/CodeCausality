@@ -13,14 +13,14 @@ jobs:
   package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.17.1
           run_install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -34,12 +34,12 @@ jobs:
         run: pnpm package:vsix
 
       - name: Inspect VSIX
-        run: ls -lh artifacts/codecausality-1.0.5.vsix
+        run: ls -lh artifacts/codecausality.vsix
 
       - name: Upload VSIX
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: codecausality-vscode
-          path: artifacts/codecausality-1.0.5.vsix
+          path: artifacts/codecausality.vsix
           if-no-files-found: error
           retention-days: 30
