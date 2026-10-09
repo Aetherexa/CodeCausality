@@ -208,12 +208,18 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
   }
 
   async revealResults(): Promise<void> {
-    await vscode.commands.executeCommand('workbench.view.extension.codecausality');
+    if (this.view) {
+      this.view.show(false);
+      this.render();
+      return;
+    }
+
     try {
       await vscode.commands.executeCommand(`${ImpactExplorerProvider.viewType}.focus`);
     } catch {
-      // The container command already reveals the result surface.
+      await vscode.commands.executeCommand('workbench.view.extension.codecausality');
     }
+
     this.render();
   }
 
