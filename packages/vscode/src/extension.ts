@@ -600,6 +600,64 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
       box-shadow: 0 12px 36px rgba(0,0,0,.12);
     }
     .welcome h2 { font-size: 22px; letter-spacing: -.5px; }
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .panel-card {
+      min-width: 0;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 12px;
+      padding: 14px;
+      background: color-mix(in srgb, var(--vscode-editorWidget-background) 74%, transparent);
+    }
+    .panel-card h3 { margin: 0; }
+    .panel-card h3::before { display: none; }
+    .section-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .section-heading p {
+      margin: 4px 0 0;
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .section-count {
+      flex: 0 0 auto;
+      min-width: 26px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      text-align: center;
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .panel-card ul { gap: 6px; }
+    .panel-card li { background: color-mix(in srgb, var(--vscode-editor-background) 75%, transparent); }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 6px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--vscode-panel-border);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .25px;
+    }
+    .badge-high { color: var(--vscode-testing-iconPassed, #3fb950); }
+    .badge-error { color: var(--vscode-errorForeground, #f85149); }
+    .badge-warning { color: var(--vscode-editorWarning-foreground, #d29922); }
+    @media (max-width: 900px) {
+      .evidence-grid { grid-template-columns: 1fr; }
+    }
     @media (max-width: 760px) {
       body { padding: 16px; }
       .app-header { align-items: flex-start; flex-direction: column; }
@@ -772,8 +830,16 @@ function renderModel(model: ExplorerModel): string {
     <h3>Impact graph</h3>
     ${renderImpactGraph(model.graph, isCurrentFile ? 'Target' : 'Changed')}
 
-    <h3>Affected files</h3>
-    <ul>
+    <section class="evidence-grid">
+      <article class="panel-card">
+        <div class="section-heading">
+          <div>
+            <h3>Affected files</h3>
+            <p>Downstream files inside the current blast radius.</p>
+          </div>
+          <span class="section-count">${impactedFiles.length}</span>
+        </div>
+        <ul>
       ${impactedFiles
         .map((file) => {
           const owners = ownerMap.get(file) ?? [];
@@ -783,40 +849,66 @@ function renderModel(model: ExplorerModel): string {
           </li>`;
         })
         .join('')}
-    </ul>
+        </ul>
+      </article>
 
-    <h3>Recommended tests</h3>
-    <ul>
+      <article class="panel-card">
+        <div class="section-heading">
+          <div>
+            <h3>Recommended tests</h3>
+            <p>Deterministic test evidence to validate first.</p>
+          </div>
+          <span class="section-count">${model.recommendedTests.length}</span>
+        </div>
+        <ul>
       ${model.recommendedTests.length
         ? model.recommendedTests
             .map(
               (test) => `<li>
                 ${fileLink(test.path)}
-                <div class="meta">${escapeHtml(test.confidence.toUpperCase())} · ${escapeHtml(test.reasons.join(', '))}</div>
+                <div class="meta"><span class="badge badge-high">${escapeHtml(test.confidence.toUpperCase())}</span>${escapeHtml(test.reasons.join(', '))}</div>
               </li>`,
             )
             .join('')
         : '<li class="meta">No deterministic test recommendations.</li>'}
-    </ul>
+        </ul>
+      </article>
+    </section>
 
-    <h3>Architecture guardrails</h3>
-    <ul>
+    <section class="evidence-grid">
+      <article class="panel-card">
+        <div class="section-heading">
+          <div>
+            <h3>Architecture guardrails</h3>
+            <p>Relevant boundary rules reached by this impact surface.</p>
+          </div>
+          <span class="section-count">${model.architectureViolations.length}</span>
+        </div>
+        <ul>
       ${model.architectureViolations.length
         ? model.architectureViolations
             .map(
               (violation) => `<li>
                 <div class="${violation.severity === 'error' ? 'error' : 'warning'}">
-                  ${escapeHtml(violation.severity.toUpperCase())} · ${escapeHtml(violation.ruleName)}
+                  <span class="badge ${violation.severity === 'error' ? 'badge-error' : 'badge-warning'}">${escapeHtml(violation.severity.toUpperCase())}</span>${escapeHtml(violation.ruleName)}
                 </div>
                 <div>${fileLink(violation.from)} → ${fileLink(violation.to)}</div>
               </li>`,
             )
             .join('')
         : '<li class="meta">No relevant architecture violations.</li>'}
-    </ul>
+        </ul>
+      </article>
 
-    <h3>Changed-file history</h3>
-    <ul>
+      <article class="panel-card">
+        <div class="section-heading">
+          <div>
+            <h3>Change history</h3>
+            <p>Churn and ownership signals for the analyzed targets.</p>
+          </div>
+          <span class="section-count">${model.history.length}</span>
+        </div>
+        <ul>
       ${model.history.length
         ? model.history
             .slice()
@@ -830,7 +922,9 @@ function renderModel(model: ExplorerModel): string {
             )
             .join('')
         : '<li class="meta">No tracked history evidence.</li>'}
-    </ul>
+        </ul>
+      </article>
+    </section>
   `;
 }
 
