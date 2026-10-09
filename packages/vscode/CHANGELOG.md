@@ -2,6 +2,12 @@
 
 All notable changes to the CodeCausality VS Code extension are documented here.
 
+## 1.0.3 — Current-file metric clarity
+
+- Renamed the first Current File metric from `Changed` to `Target`.
+- Added an explicit note explaining that Current File mode is a hypothetical impact analysis and does not require the file to be modified on disk.
+- Kept `Changed` for Working Tree mode, where the metric represents actual Git changes.
+
 ## 1.0.2 — Editor tab experience
 
 - Moved CodeCausality results from the narrow Activity Bar sidebar into a normal editor-area webview tab.
