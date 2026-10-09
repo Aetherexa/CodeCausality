@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -52,7 +53,7 @@ if (!width || !height || width < 128 || height < 128) {
   throw new Error(`Marketplace icon must be at least 128x128; got ${width ?? '?'}x${height ?? '?'}.`);
 }
 
-console.log(`Marketplace icon OK: ${width}x${height} PNG (${data.length} bytes)`);
+process.stdout.write(`Marketplace icon OK: ${width}x${height} PNG (${data.length} bytes)\n`);
 
 function crc32(buffer) {
   let crc = 0xffffffff;
