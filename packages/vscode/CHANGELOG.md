@@ -2,6 +2,14 @@
 
 All notable changes to the CodeCausality VS Code extension are documented here.
 
+## 1.0.4 — Modernized dashboard UX
+
+- Refreshed the editor-tab UI with a cleaner VS Code-native dashboard hierarchy.
+- Added risk-aware styling, metric cards, status pills, and a segmented analysis switcher.
+- Added responsive evidence cards for affected files, tests, architecture guardrails, and history.
+- Added visual graph zoom in/out, fit-to-width, reset, and drag-to-pan controls.
+- Improved graph legends, filters, empty states, and responsive behavior without changing V1 analysis semantics.
+
 ## 1.0.3 — Current-file metric clarity
 
 - Renamed the first Current File metric from `Changed` to `Target`.
