@@ -2,7 +2,7 @@
   "name": "codecausality",
   "displayName": "CodeCausality — Change Impact Intelligence",
   "description": "Understand your repository and see what a code change can affect before you ship it.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "aetherexa",
   "license": "SEE LICENSE IN LICENSE",
   "pricing": "Free",
@@ -103,7 +103,7 @@
     "typecheck": "tsc -b --pretty false",
     "vscode:prepublish": "pnpm run build",
     "prepare:vsix": "node -e \"require('fs').mkdirSync('../../artifacts',{recursive:true})\"",
-    "package:vsix": "pnpm run prepare:vsix && vsce package --no-dependencies --out ../../artifacts/codecausality-1.0.3.vsix",
+    "package:vsix": "pnpm run prepare:vsix && vsce package --no-dependencies --out ../../artifacts/codecausality-1.0.4.vsix",
     "publish:marketplace": "vsce publish --no-dependencies"
   },
   "devDependencies": {

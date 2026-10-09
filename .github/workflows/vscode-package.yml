@@ -34,12 +34,12 @@ jobs:
         run: pnpm package:vsix
 
       - name: Inspect VSIX
-        run: ls -lh artifacts/codecausality-1.0.3.vsix
+        run: ls -lh artifacts/codecausality-1.0.4.vsix
 
       - name: Upload VSIX
         uses: actions/upload-artifact@v4
         with:
           name: codecausality-vscode
-          path: artifacts/codecausality-1.0.3.vsix
+          path: artifacts/codecausality-1.0.4.vsix
           if-no-files-found: error
           retention-days: 30
