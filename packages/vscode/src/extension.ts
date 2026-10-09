@@ -48,23 +48,34 @@ interface ExplorerModel {
   history: GitFileHistory[];
 }
 
-class ImpactExplorerProvider implements vscode.WebviewViewProvider {
-  static readonly viewType = 'codecausality.impactExplorer';
+class ImpactExplorerPanel {
+  static readonly viewType = 'codecausality.impactPanel';
 
-  private view?: vscode.WebviewView;
+  private panel?: vscode.WebviewPanel;
   private model?: ExplorerModel;
   private status = 'Open a source file or analyze the current working tree.';
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
-  resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
-    view.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [this.context.extensionUri],
-    };
+  private ensurePanel(): vscode.WebviewPanel {
+    if (this.panel) return this.panel;
 
-    view.webview.onDidReceiveMessage(async (message: unknown) => {
+    const panel = vscode.window.createWebviewPanel(
+      ImpactExplorerPanel.viewType,
+      'CodeCausality Impact',
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [this.context.extensionUri],
+      },
+    );
+
+    panel.iconPath = vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icon.png');
+    panel.onDidDispose(() => {
+      this.panel = undefined;
+    });
+    panel.webview.onDidReceiveMessage(async (message: unknown) => {
       if (!message || typeof message !== 'object') return;
       const payload = message as { type?: string; path?: string };
 
@@ -72,14 +83,18 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
         await this.openFile(payload.path);
       } else if (payload.type === 'analyzeCurrentFile') {
         await this.analyzeCurrentFile();
+        await this.revealResults();
       } else if (payload.type === 'analyzeWorkingTree') {
         await this.analyzeWorkingTree();
+        await this.revealResults();
       } else if (payload.type === 'openGettingStarted') {
         await openGettingStarted();
       }
     });
 
+    this.panel = panel;
     this.render();
+    return panel;
   }
 
   async analyzeCurrentFile(): Promise<void> {
@@ -208,18 +223,8 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
   }
 
   async revealResults(): Promise<void> {
-    if (this.view) {
-      this.view.show(false);
-      this.render();
-      return;
-    }
-
-    try {
-      await vscode.commands.executeCommand(`${ImpactExplorerProvider.viewType}.focus`);
-    } catch {
-      await vscode.commands.executeCommand('workbench.view.extension.codecausality');
-    }
-
+    const panel = this.ensurePanel();
+    panel.reveal(vscode.ViewColumn.Active, false);
     this.render();
   }
 
@@ -245,23 +250,22 @@ class ImpactExplorerProvider implements vscode.WebviewViewProvider {
   }
 
   private render(): void {
-    if (!this.view) return;
-    this.view.webview.html = renderHtml(this.model, this.status);
+    if (!this.panel) return;
+    this.panel.webview.html = renderHtml(this.model, this.status);
   }
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-  const provider = new ImpactExplorerProvider(context);
+  const impactPanel = new ImpactExplorerPanel(context);
 
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(ImpactExplorerProvider.viewType, provider),
     vscode.commands.registerCommand('codecausality.analyzeCurrentFile', async () => {
-      await provider.analyzeCurrentFile();
-      await provider.revealResults();
+      await impactPanel.analyzeCurrentFile();
+      await impactPanel.revealResults();
     }),
     vscode.commands.registerCommand('codecausality.analyzeWorkingTree', async () => {
-      await provider.analyzeWorkingTree();
-      await provider.revealResults();
+      await impactPanel.analyzeWorkingTree();
+      await impactPanel.revealResults();
     }),
     vscode.commands.registerCommand('codecausality.openGettingStarted', () =>
       openGettingStarted(),
@@ -296,13 +300,14 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     :root { color-scheme: light dark; }
     body {
       margin: 0;
-      padding: 12px;
+      padding: 24px;
       color: var(--vscode-foreground);
-      background: var(--vscode-sideBar-background);
+      background: var(--vscode-editor-background);
       font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size);
     }
-    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .app { max-width: 1480px; margin: 0 auto; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 16px; }
     button {
       border: 0;
       padding: 6px 10px;
@@ -325,7 +330,7 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
     .risk { font-size: 24px; font-weight: 700; margin: 8px 0; }
     .metrics {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
       gap: 6px;
     }
     .metric {
@@ -403,12 +408,14 @@ function renderHtml(model: ExplorerModel | undefined, status: string): string {
   </style>
 </head>
 <body>
+  <main class="app">
   <div class="toolbar">
     <button data-command="current">Current file</button>
     <button data-command="workingTree">Working tree</button>
   </div>
   <div class="status">${escapeHtml(status)}</div>
   ${body}
+  </main>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
     document.querySelector('[data-command="current"]')?.addEventListener('click', () => {
